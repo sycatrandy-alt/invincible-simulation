@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>INVINCIBLE: SIMULATION</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="scanlines"></div>
+  <div class="grid-bg"></div>
+
+  <audio id="battle-bgm" src="audio/battle.mp3" loop preload="auto"></audio>
+
+  <div id="toast" class="toast"></div>
+
+  <div id="app" class="screen">
+
+    <!-- BOOT -->
+    <section id="screen-boot" class="view active">
+      <div class="boot-text">
+        <p class="line">&gt; VILTRUM COMBAT CONSOLE</p>
+        <p class="line">&gt; LOADING NEURAL LINK...</p>
+        <p class="line">&gt; SPRITE PACK v1.2.86</p>
+        <p class="line blink">&gt; PRESS ANY KEY</p>
+      </div>
+    </section>
+
+    <!-- MAIN MENU -->
+    <section id="screen-menu" class="view">
+      <h1 class="title">INVINCIBLE<span class="sub">: SIMULATION</span></h1>
+      <div class="menu-grid">
+        <button class="cyber-btn" data-go="play">PLAY</button>
+        <button class="cyber-btn" data-go="shop">SHOP</button>
+        <button class="cyber-btn" data-go="settings">SETTINGS</button>
+        <button class="cyber-btn" data-go="credits">CREDITS</button>
+      </div>
+      <div class="hud-corner tl">SYS://MAIN</div>
+      <div class="hud-corner tr">v0.5 · BUGFIX UPDATE</div>
+      <div class="hud-corner bl">USER: MARK_G</div>
+      <div class="hud-corner br" id="credits-display">GDA: 0  |  VM: 0</div>
+    </section>
+
+    <!-- PLAY / SCENE SELECT -->
+    <section id="screen-play" class="view">
+      <div class="header-bar">
+        <button class="back-btn" data-go="menu">&lt; BACK</button>
+        <h2>SCENES UPDATE</h2>
+        <div></div>
+      </div>
+      <div id="scene-list" class="scene-list"></div>
+    </section>
+
+    <!-- SHOP -->
+    <section id="screen-shop" class="view">
+      <div class="header-bar">
+        <button class="back-btn" data-go="menu">&lt; BACK</button>
+        <h2>SHOP</h2>
+        <div id="shop-credits">GDA: 0</div>
+      </div>
+      <div class="shop-tabs">
+        <button class="tab active" data-tab="items">ITEMS</button>
+        <button class="tab" data-tab="suits">SUITS</button>
+        <button class="tab" data-tab="tutors">MOVE TUTORS</button>
+      </div>
+      <div id="shop-grid" class="shop-grid"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="screen-settings" class="view">
+      <div class="header-bar">
+        <button class="back-btn" data-go="menu">&lt; BACK</button>
+        <h2>SETTINGS</h2>
+        <div></div>
+      </div>
+      <div class="settings-list">
+        <label class="setting-row">
+          <span>BATTLE SPEED</span>
+          <select id="set-speed">
+            <option value="1">SLOW</option>
+            <option value="2" selected>NORMAL</option>
+            <option value="3">FAST</option>
+          </select>
+        </label>
+        <label class="setting-row">
+          <span>TEXT SPEED</span>
+          <select id="set-text">
+            <option value="60">SLOW</option>
+            <option value="30" selected>NORMAL</option>
+            <option value="10">FAST</option>
+          </select>
+        </label>
+        <label class="setting-row">
+          <span>BLOOD LEVEL</span>
+          <select id="set-blood">
+            <option value="off">OFF</option>
+            <option value="comic" selected>COMIC</option>
+            <option value="show">SHOW</option>
+          </select>
+        </label>
+        <label class="setting-row">
+          <span>SCREEN SHAKE</span>
+          <input type="checkbox" id="set-shake" checked />
+        </label>
+        <label class="setting-row">
+          <span>MUSIC VOLUME</span>
+          <input type="range" id="set-vol" min="0" max="100" value="70" />
+        </label>
+      </div>
+    </section>
+
+    <!-- CREDITS -->
+    <section id="screen-credits" class="view">
+      <div class="header-bar">
+        <button class="back-btn" data-go="menu">&lt; BACK</button>
+        <h2>CREDITS</h2>
+        <div></div>
+      </div>
+      <div class="credits-scroll">
+        <p>DESIGN &amp; CODE</p>
+        <p class="name">SWIFFT</p>
+        <br/>
+        <p>BASED ON</p>
+        <p class="name">INVINCIBLE</p>
+        <p>BY ROBERT KIRKMAN</p>
+        <br/>
+        <p>SPRITES</p>
+        <p class="name">KRESKA ART v1.2.86</p>
+        <br/>
+        <p>UI ENGINE</p>
+        <p class="name">VILTRUM CONSOLE</p>
+        <br/>
+        <p class="name dim">— FAN PROJECT, NON-COMMERCIAL —</p>
+      </div>
+    </section>
+
+    <!-- CHARACTER SELECT -->
+    <section id="screen-select" class="view">
+      <div class="header-bar">
+        <button class="back-btn" data-go="play">&lt; BACK</button>
+        <h2>CHOOSE FIGHTER</h2>
+        <div></div>
+      </div>
+      <div id="select-scene-label" class="select-scene-label"></div>
+      <div id="select-grid" class="select-grid"></div>
+    </section>
+
+    <!-- BATTLE -->
+    <section id="screen-battle" class="view">
+      <div class="battle-stage">
+        <div class="stage-frame tl">SYS://BATTLE</div>
+        <div class="stage-frame tr" id="turn-indicator">TURN 01</div>
+        <div class="stage-frame bl">VILTRUM-LINK ONLINE</div>
+        <div class="stage-frame br">SIM-CORE 1.2.86</div>
+        <div id="phase-banner" class="phase-banner">PHASE 2</div>
+        <div id="fx-layer" class="fx-layer"></div>
+        <div id="bench-panel" class="bench-panel hidden">
+          <div class="bench-label">BENCH</div>
+          <img id="bench-sprite" alt="bench" />
+          <div id="bench-name" class="bench-name">EVE</div>
+          <div class="bench-hp"><div id="bench-hp-fill" class="hp-fill"></div></div>
+        </div>
+
+        <div class="combatant enemy">
+          <div class="info-card enemy-card">
+            <div class="name-line"><span id="enemy-name">ENEMY</span><span id="enemy-lvl">Lv ?</span></div>
+            <div class="bar-wrap">
+              <div class="bar-label">HP</div>
+              <div class="hp-bar"><div id="enemy-hp" class="hp-fill"></div></div>
+            </div>
+            <div class="hp-text"><span id="enemy-hp-text">--/--</span></div>
+          </div>
+          <div class="sprite-frame enemy-frame">
+            <div class="ring"></div>
+            <img id="enemy-sprite" class="sprite enemy-sprite" alt="enemy" />
+          </div>
+        </div>
+
+        <div class="combatant player">
+          <div class="sprite-frame player-frame">
+            <div class="ring"></div>
+            <img id="player-sprite" class="sprite player-sprite" alt="player" />
+          </div>
+          <div class="info-card player-card">
+            <div class="name-line"><span id="player-name">MARK</span><span id="player-lvl">Lv 1</span></div>
+            <div class="bar-wrap">
+              <div class="bar-label">HP</div>
+              <div class="hp-bar"><div id="player-hp" class="hp-fill"></div></div>
+            </div>
+            <div class="hp-text"><span id="player-hp-text">--/--</span></div>
+            <div class="bar-wrap">
+              <div class="bar-label">EP</div>
+              <div class="ep-bar"><div id="player-ep" class="ep-fill"></div></div>
+            </div>
+            <div class="hp-text small">EP <span id="player-ep-text">--/--</span></div>
+            <div class="bar-wrap">
+              <div class="bar-label">XP</div>
+              <div class="xp-bar"><div id="player-xp" class="xp-fill"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="battle-ui">
+        <div id="dialogue" class="dialogue">A wild battle begins.</div>
+        <div id="cmd-main" class="cmd-grid cmd-grid-5">
+          <button class="cmd-btn fight" data-cmd="fight">⚔ FIGHT</button>
+          <button class="cmd-btn utility" data-cmd="utility">⚙ UTILITY</button>
+          <button class="cmd-btn item" data-cmd="item">🜨 ITEM</button>
+          <button class="cmd-btn swap" data-cmd="swap">⇄ SWAP</button>
+          <button class="cmd-btn flee" data-cmd="flee">⏏ FLEE</button>
+        </div>
+        <div id="cmd-moves" class="cmd-grid hidden"></div>
+        <div id="cmd-utility" class="cmd-grid hidden"></div>
+        <div id="cmd-items" class="cmd-grid hidden"></div>
+        <div id="cmd-swap" class="cmd-grid hidden"></div>
+        <button id="cmd-back" class="back-btn hidden">&lt; BACK</button>
+      </div>
+    </section>
+
+    <!-- LEVEL UP / MOVE SWAP -->
+    <section id="screen-learn" class="view">
+      <div class="learn-card">
+        <h2>LEVEL UP</h2>
+        <p id="learn-text">MARK wants to learn a new move.</p>
+        <div id="learn-current" class="move-slot-row"></div>
+        <p class="dim">Tap a move to forget, or skip.</p>
+        <button id="learn-skip" class="cyber-btn small">SKIP</button>
+      </div>
+    </section>
+
+    <!-- VICTORY -->
+    <section id="screen-victory" class="view">
+      <div class="victory-card">
+        <h2 id="victory-title">VICTORY</h2>
+        <p id="victory-text"></p>
+        <button class="cyber-btn" id="victory-continue">CONTINUE</button>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/battle.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
