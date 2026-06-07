@@ -37,24 +37,30 @@ const Battle = (() => {
   }
 
   function playBGM(enemyDef) {
-    const battleBgm = document.getElementById('battle-bgm');
+    const battleBgm   = document.getElementById('battle-bgm');
     const conquestBgm = document.getElementById('conquest-bgm');
+    const thraggBgm   = document.getElementById('thragg-bgm');
+    const allTracks = [battleBgm, conquestBgm, thraggBgm].filter(Boolean);
     const vol = Math.max(0, Math.min(1, (Game.state.settings.vol || 70) / 100));
-    const BOSS_NAMES = ['CONQUEST', 'THRAGG'];
-    const isBoss = enemyDef && BOSS_NAMES.includes(enemyDef.name);
-    const bgm   = isBoss ? conquestBgm : battleBgm;
-    const other = isBoss ? battleBgm : conquestBgm;
-    const trackLabel = isBoss ? 'BOSS THEME' : 'BATTLE THEME';
+
+    let bgm = battleBgm;
+    let trackLabel = 'BATTLE THEME';
+    if (enemyDef) {
+      if (enemyDef.name === 'THRAGG') { bgm = thraggBgm; trackLabel = 'THRAGG · DARK LORD'; }
+      else if (enemyDef.name === 'CONQUEST') { bgm = conquestBgm; trackLabel = 'CONQUEST · BIG BOSS'; }
+    }
 
     console.log('[BGM] Enemy:', enemyDef && enemyDef.name, '→ Playing:', trackLabel);
     const ind = document.getElementById('bgm-indicator');
     if (ind) ind.textContent = '♪ ' + trackLabel;
 
-    if (other) { other.pause(); other.currentTime = 0; }
+    // Stop EVERY track first (defensive — prevents overlap if a previous play was mid-load)
+    allTracks.forEach(a => { a.pause(); a.currentTime = 0; });
+
     if (bgm) {
       bgm.volume = vol;
       bgm.currentTime = 0;
-      bgm.load(); // force re-load in case cache served wrong file
+      bgm.load();
       const p = bgm.play();
       if (p && p.catch) p.catch(err => console.log('[BGM] play blocked:', err));
     }

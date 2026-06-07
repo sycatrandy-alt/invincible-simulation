@@ -345,8 +345,8 @@ button { font-family: inherit; }
 
 /* ============ SCENE LIST ============ */
 .scene-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 18px;
   overflow-y: auto;
   padding: 8px;
@@ -1072,6 +1072,15 @@ button { font-family: inherit; }
   letter-spacing: 2px;
 }
 .fighter-card .fstat span { padding: 4px; border: 1px solid var(--border-soft); }
+.fighter-card.picked { border-color: var(--green); box-shadow: 0 0 32px rgba(52,255,154,0.45); }
+.fighter-card .picked-tag {
+  position: absolute; top: 12px; right: 12px;
+  background: var(--green); color: #000;
+  padding: 4px 12px;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700; font-size: 10px;
+  letter-spacing: 3px;
+}
 
 /* ============ BENCH PANEL ============ */
 .bench-panel {

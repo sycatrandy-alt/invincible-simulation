@@ -116,7 +116,7 @@ const Router = (() => {
     // Only stop music here. Starting the right track is handled by Battle.start
     // (it has the actual enemy info — Router doesn't).
     if (name !== 'battle') {
-      ['battle-bgm', 'conquest-bgm'].forEach(id => {
+      ['battle-bgm', 'conquest-bgm', 'thragg-bgm'].forEach(id => {
         const a = document.getElementById(id);
         if (a) { a.pause(); a.currentTime = 0; }
       });
@@ -178,21 +178,30 @@ function renderScenes() {
 
 function startScene(sc) {
   Game.state.currentScene = sc.id;
-  if (sc.scripted) {
-    // Tutorial: Mark only, no bench
-    launchBattle(sc, ['mark']);
+  if (sc.forceCharacter) {
+    launchBattle(sc, [sc.forceCharacter]);
   } else {
     renderCharSelect(sc);
     Router.go('select');
   }
 }
 
-function renderCharSelect(sc) {
+let selectStarter = null; // sticky pick within character select screen
+
+function renderCharSelect(sc, starterId) {
   const roster = Game.state.roster || ['mark', 'eve'];
-  const label = roster.length > 2
-    ? `SCENE ${sc.num} · ${sc.title} — Pick your STARTER (one of the others tags in as bench)`
-    : `SCENE ${sc.num} · ${sc.title} — Pick your STARTER (the other tags in as bench)`;
-  document.getElementById('select-scene-label').textContent = label;
+  selectStarter = starterId || null;
+  const labelEl = document.getElementById('select-scene-label');
+
+  if (roster.length === 1) {
+    labelEl.textContent = `SCENE ${sc.num} · ${sc.title}`;
+  } else if (!selectStarter) {
+    labelEl.textContent = `SCENE ${sc.num} · ${sc.title} — Pick your STARTER`;
+  } else {
+    const starterName = CHARACTERS[selectStarter].name;
+    labelEl.textContent = `STARTER: ${starterName} — Now pick BENCH (or click the same again to go solo)`;
+  }
+
   const grid = document.getElementById('select-grid');
   grid.innerHTML = '';
   roster.forEach(id => {
@@ -200,8 +209,10 @@ function renderCharSelect(sc) {
     if (!ch) return;
     const save = Game.state.chars[id];
     const card = document.createElement('div');
-    card.className = 'fighter-card';
+    card.className = 'fighter-card' + (selectStarter === id ? ' picked' : '');
+    const tag = selectStarter === id ? '<div class="picked-tag">STARTER</div>' : '';
     card.innerHTML = `
+      ${tag}
       <img src="${ch.sprite}" alt="${ch.name}" />
       <div class="fname">${ch.name}</div>
       <div class="ftag">${ch.tag} · Lv ${save.level}</div>
@@ -213,11 +224,23 @@ function renderCharSelect(sc) {
       </div>
     `;
     card.onclick = () => {
-      // Active = clicked, bench = next member in roster (skipping active)
-      const others = roster.filter(r => r !== id);
-      const benchId = others[0] || null;
-      const party = benchId ? [id, benchId] : [id];
-      launchBattle(sc, party);
+      if (roster.length === 1) { launchBattle(sc, [id]); return; }
+      if (!selectStarter) {
+        // first pick → highlight as starter
+        if (roster.length === 2) {
+          // Only 2 in roster: auto-bench the other immediately
+          const other = roster.find(r => r !== id);
+          launchBattle(sc, [id, other]);
+        } else {
+          renderCharSelect(sc, id);
+        }
+      } else if (selectStarter === id) {
+        // Same card clicked twice → go solo (no bench)
+        launchBattle(sc, [id]);
+      } else {
+        // second pick → bench
+        launchBattle(sc, [selectStarter, id]);
+      }
     };
     grid.appendChild(card);
   });
@@ -490,7 +513,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (volEl) {
     volEl.addEventListener('input', () => {
       const v = Math.max(0, Math.min(1, Number(volEl.value) / 100));
-      ['battle-bgm', 'conquest-bgm'].forEach(id => {
+      ['battle-bgm', 'conquest-bgm', 'thragg-bgm'].forEach(id => {
         const a = document.getElementById(id);
         if (a) a.volume = v;
       });
