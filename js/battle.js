@@ -37,15 +37,22 @@ const Battle = (() => {
     const battleBgm = document.getElementById('battle-bgm');
     const conquestBgm = document.getElementById('conquest-bgm');
     const vol = Math.max(0, Math.min(1, (Game.state.settings.vol || 70) / 100));
-    const isConquest = enemyDef && enemyDef.name === 'CONQUEST';
+    const isConquest = enemyDef && (enemyDef.name === 'CONQUEST' || enemyDef.sprite === 'assets/conquest.png');
     const bgm   = isConquest ? conquestBgm : battleBgm;
     const other = isConquest ? battleBgm : conquestBgm;
+    const trackLabel = isConquest ? 'CONQUEST THEME' : 'BATTLE THEME';
+
+    console.log('[BGM] Enemy:', enemyDef && enemyDef.name, '→ Playing:', trackLabel);
+    const ind = document.getElementById('bgm-indicator');
+    if (ind) ind.textContent = '♪ ' + trackLabel;
+
     if (other) { other.pause(); other.currentTime = 0; }
     if (bgm) {
       bgm.volume = vol;
       bgm.currentTime = 0;
+      bgm.load(); // force re-load in case cache served wrong file
       const p = bgm.play();
-      if (p && p.catch) p.catch(err => console.log('BGM play blocked:', err));
+      if (p && p.catch) p.catch(err => console.log('[BGM] play blocked:', err));
     }
   }
 
