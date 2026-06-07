@@ -24,6 +24,9 @@ const Battle = (() => {
       scripted: !!enemyDef.scripted
     };
     playBGM(enemyDef);
+    // Clear any stale phase banner from a previous fight
+    const pb = document.getElementById('phase-banner');
+    if (pb) { pb.classList.remove('show'); pb.textContent = ''; }
     renderAll();
     dialogueQueue = [];
     inputLocked = false;
@@ -37,10 +40,11 @@ const Battle = (() => {
     const battleBgm = document.getElementById('battle-bgm');
     const conquestBgm = document.getElementById('conquest-bgm');
     const vol = Math.max(0, Math.min(1, (Game.state.settings.vol || 70) / 100));
-    const isConquest = enemyDef && (enemyDef.name === 'CONQUEST' || enemyDef.sprite === 'assets/conquest.png');
-    const bgm   = isConquest ? conquestBgm : battleBgm;
-    const other = isConquest ? battleBgm : conquestBgm;
-    const trackLabel = isConquest ? 'CONQUEST THEME' : 'BATTLE THEME';
+    const BOSS_NAMES = ['CONQUEST', 'THRAGG'];
+    const isBoss = enemyDef && BOSS_NAMES.includes(enemyDef.name);
+    const bgm   = isBoss ? conquestBgm : battleBgm;
+    const other = isBoss ? battleBgm : conquestBgm;
+    const trackLabel = isBoss ? 'BOSS THEME' : 'BATTLE THEME';
 
     console.log('[BGM] Enemy:', enemyDef && enemyDef.name, '→ Playing:', trackLabel);
     const ind = document.getElementById('bgm-indicator');
@@ -524,15 +528,18 @@ const Battle = (() => {
       for (let i = e.char.phases.length - 1; i > state.phaseIdx; i--) {
         if (hpPct <= e.char.phases[i].threshold) { target = i; break; }
       }
-      // Apply every phase the enemy skipped on the way down (accumulate buffs)
+      // Apply every skipped phase's effects, but only ONE banner at the end
+      const wasAt = state.phaseIdx;
       while (state.phaseIdx < target) {
         state.phaseIdx++;
         const ph = e.char.phases[state.phaseIdx];
         e.moves = ph.moves.slice();
         if (ph.atkBuff) e.atk += ph.atkBuff;
         if (ph.spdBuff) e.spd += ph.spdBuff;
-        showPhaseBanner('PHASE ' + (state.phaseIdx + 1));
         queueDialogue(ph.text);
+      }
+      if (state.phaseIdx > wasAt) {
+        showPhaseBanner('PHASE ' + (state.phaseIdx + 1));
       }
     }
   }

@@ -59,7 +59,23 @@ const MOVES = {
   pinkRain:     { name: 'PINK RAIN',    type: 'COSMIC',   power: 38, ep: 16, desc: 'Shard fall. Wide hit.' },
   atomicEdge:   { name: 'ATOMIC EDGE',  type: 'COSMIC',   power: 78, ep: 24, desc: 'Reshape the atoms of the air into blades.' },
   healingPulse: { name: 'HEALING PULSE',type: 'BIO',      power: 0,  ep: 16, desc: 'Restore 60% HP to the active fighter.' },
-  meltdown:     { name: 'MELTDOWN',     type: 'BIO',      power: 88, ep: 26, desc: 'Force the enemy\'s cells to come apart.' }
+  meltdown:     { name: 'MELTDOWN',     type: 'BIO',      power: 88, ep: 26, desc: 'Force the enemy\'s cells to come apart.' },
+
+  // ===== ALLEN THE ALIEN MOVES =====
+  cosmicSlap:   { name: 'COSMIC SLAP',  type: 'PHYSICAL',power: 30, ep: 5,  desc: 'A casual smack from interstellar muscle.' },
+  starHook:     { name: 'STAR HOOK',    type: 'COSMIC',  power: 45, ep: 12, desc: 'A hook from across the galaxy.' },
+  galaxyRam:    { name: 'GALAXY RAM',   type: 'PHYSICAL',power: 65, ep: 18, desc: 'Head-down, full charge.' },
+  unopanWill:   { name: 'UNOPAN WILL',  type: 'MENTAL',  power: 50, ep: 14, desc: 'Channel his species\' iron resolve.' },
+
+  // ===== MARS BOSS MOVES =====
+  swarmBite:    { name: 'SWARM BITE',   type: 'BIO',     power: 28, ep: 4,  desc: 'A thousand small mouths.' },
+  scepterBolt:  { name: 'SCEPTER BOLT', type: 'COSMIC',  power: 40, ep: 10, desc: 'Crystallized authority.' },
+  unicycleRam:  { name: 'WHEEL RUSH',   type: 'PHYSICAL',power: 38, ep: 8,  desc: 'Run them over.' },
+  blasterShot:  { name: 'BLASTER SHOT', type: 'ENERGY',  power: 36, ep: 6,  desc: 'Plasma round, dead center.' },
+  beastFury:    { name: 'BEAST FURY',   type: 'PHYSICAL',power: 85, ep: 20, desc: 'Earth-shaking war cry.' },
+  thraggFist:   { name: 'THRAGG FIST',  type: 'PHYSICAL',power: 70, ep: 16, desc: 'The Emperor\'s correction.' },
+  worldEnder:   { name: 'WORLD ENDER',  type: 'COSMIC',  power: 130, ep: 36, desc: 'A move to end species.' },
+  empireDecree: { name: 'EMPIRE DECREE',type: 'MENTAL',  power: 75, ep: 22, desc: 'Order from a billion stars away.' }
 };
 
 const UTILITIES = {
@@ -105,6 +121,22 @@ const CHARACTERS = {
       { lvl: 9, move: 'burst' }
     ],
     utilities: ['heal', 'reshapeU', 'focus']
+  },
+  allen: {
+    id: 'allen',
+    name: 'ALLEN',
+    sprite: 'assets/allen.png',
+    tag: 'COSMIC',
+    baseHP: 110, baseEP: 50,
+    baseATK: 20, baseDEF: 14, baseSPD: 12,
+    bio: 'Unopan champion. Strong enough to bend a galaxy.',
+    moveset: [
+      { lvl: 1, move: 'cosmicSlap' },
+      { lvl: 1, move: 'starHook' },
+      { lvl: 4, move: 'unopanWill' },
+      { lvl: 8, move: 'galaxyRam' }
+    ],
+    utilities: ['suitUp', 'focus']
   }
 };
 
@@ -219,16 +251,165 @@ const ENEMIES = {
       }
     ],
     xp: 500, gda: 400
+  },
+
+  // ============ MARS ENEMIES ============
+  princess: {
+    name: 'MARTIAN PRINCESS',
+    sprite: 'assets/princess.png',
+    tag: 'MENTAL',
+    hp: 320, ep: 80, atk: 26, def: 18, spd: 11,
+    slowChance: 0.15,
+    canHeal: true, healAmount: 40, healThreshold: 0.4, healChance: 0.25,
+    healDialogue: 'PRINCESS: "The Court mends what you would break."',
+    moves: ['scepterBolt', 'unopanWill', 'slam'],
+    intro: 'MARTIAN PRINCESS: "You came armed. Bold. Continue if you wish to be tested."',
+    midHpDialogue: [
+      { at: 0.6, text: 'PRINCESS: "You strike like one of theirs."' },
+      { at: 0.3, text: 'PRINCESS: "Enough. I have seen what I needed."' }
+    ],
+    xp: 220, gda: 180
+  },
+  sequid: {
+    name: 'SEQUID SWARM',
+    sprite: 'assets/sequid.png',
+    tag: 'BIO',
+    hp: 380, ep: 60, atk: 18, def: 8, spd: 14,
+    slowChance: 0.1,
+    moves: ['swarmBite', 'bite', 'slam'],
+    intro: 'SEQUID SWARM ripples — a thousand voices in one wet whisper.',
+    midHpDialogue: [
+      { at: 0.66, text: 'They split. There are MORE of them now.' },
+      { at: 0.33, text: 'They split AGAIN. The hum is deafening.' }
+    ],
+    xp: 260, gda: 200
+  },
+  battle_beast: {
+    name: 'BATTLE BEAST',
+    sprite: 'assets/battle_beast.png',
+    tag: 'VILTRUMITE',
+    hp: 420, ep: 100, atk: 32, def: 22, spd: 10,
+    slowChance: 0.2,
+    moves: ['beastFury', 'haymaker', 'uppercut', 'slam'],
+    intro: 'BATTLE BEAST: "I have killed worlds. SHOW ME WHY YOU\'RE WORTH MY TIME."',
+    midHpDialogue: [
+      { at: 0.7, text: 'BATTLE BEAST: "Better. Better!"' },
+      { at: 0.4, text: 'BATTLE BEAST: "YES — finally a hunt."' },
+      { at: 0.2, text: 'BATTLE BEAST stops, breathing hard. "Enough. You\'ve earned the air you breathe."' }
+    ],
+    xp: 0, gda: 250,
+    scripted: true  // unwinnable — survive to "win" the encounter
+  },
+  allen_enemy: {
+    name: 'ALLEN',
+    sprite: 'assets/allen.png',
+    tag: 'COSMIC',
+    hp: 360, ep: 80, atk: 26, def: 18, spd: 12,
+    slowChance: 0.15,
+    moves: ['cosmicSlap', 'starHook', 'galaxyRam', 'slam'],
+    intro: 'ALLEN: "You\'re wearing the colors. Talk fast."',
+    midHpDialogue: [
+      { at: 0.6, text: 'ALLEN: "Wait — you fight like Nolan, but not like a Viltrumite."' },
+      { at: 0.25, text: 'ALLEN lowers his fists. "OK. OK. I get it. Stop hitting me."' }
+    ],
+    xp: 300, gda: 250
+  },
+  space_racer: {
+    name: 'SPACE RACER',
+    sprite: 'assets/space_racer.png',
+    tag: 'TECH',
+    hp: 280, ep: 70, atk: 24, def: 14, spd: 18,
+    slowChance: 0.05,
+    moves: ['blasterShot', 'unicycleRam', 'laserBlast'],
+    intro: 'SPACE RACER revs his wheel. "Bounty\'s a bounty, kid."',
+    midHpDialogue: [
+      { at: 0.5, text: 'SPACE RACER: "Tch. They underbid this job."' },
+      { at: 0.2, text: 'SPACE RACER: "Fine, fine. Not worth the paint job."' }
+    ],
+    xp: 320, gda: 280
+  },
+  thaedus: {
+    name: 'THAEDUS',
+    sprite: 'assets/thaedus.png',
+    tag: 'VILTRUMITE',
+    hp: 520, ep: 110, atk: 34, def: 26, spd: 8,
+    slowChance: 0.25,
+    canHeal: true, healAmount: 70, healThreshold: 0.4, healChance: 0.3,
+    healDialogue: 'THAEDUS: "I have lived a long time, child. Long enough to mend." (His wounds close.)',
+    moves: ['viltrumStrike', 'haymaker', 'uppercut', 'maceCrush'],
+    intro: 'THAEDUS: "I left the Empire to find something better than killing. Don\'t make me prove I still can."',
+    midHpDialogue: [
+      { at: 0.7, text: 'THAEDUS: "Good. You\'re not Nolan."' },
+      { at: 0.4, text: 'THAEDUS: "BETTER than him. Maybe."' },
+      { at: 0.2, text: 'THAEDUS: "I leave Mars in your hands."' }
+    ],
+    xp: 450, gda: 380
+  },
+  kregg: {
+    name: 'GENERAL KREGG',
+    sprite: 'assets/kregg.png',
+    tag: 'VILTRUMITE',
+    hp: 560, ep: 100, atk: 36, def: 24, spd: 12,
+    slowChance: 0.1,  // aggressive — barely winds up
+    moves: ['thraggFist', 'haymaker', 'uppercut', 'omniSlap'],
+    intro: 'GENERAL KREGG: "The Empire does not forget. The Empire does not forgive."',
+    midHpDialogue: [
+      { at: 0.5, text: 'KREGG: "Predictable. Disappointing."' },
+      { at: 0.2, text: 'KREGG: "FOR THRAGG."' }
+    ],
+    xp: 520, gda: 460
+  },
+  thragg: {
+    name: 'THRAGG',
+    sprite: 'assets/thragg.png',
+    tag: 'VILTRUMITE',
+    hp: 700, ep: 160, atk: 40, def: 28, spd: 9,
+    slowChance: 0.15,
+    canHeal: true, healAmount: 90, healThreshold: 0.3, healChance: 0.25,
+    healDialogue: 'THRAGG: "I am the Empire. The Empire endures." (His wounds close in seconds.)',
+    moves: ['thraggFist', 'haymaker', 'uppercut'],
+    intro: 'THRAGG looks down at you. "Another half-breed. I will be brief."',
+    phases: [
+      {
+        threshold: 1.0,
+        text: 'THRAGG: "Show me what Nolan\'s child can do."',
+        moves: ['thraggFist', 'haymaker', 'uppercut']
+      },
+      {
+        threshold: 0.5,
+        text: 'THRAGG: "Adequate. I will use both hands now."',
+        moves: ['thraggFist', 'maceCrush', 'empireDecree', 'haymaker'],
+        atkBuff: 4
+      },
+      {
+        threshold: 0.2,
+        text: 'THRAGG: "I have a billion children. You have ONE life."',
+        moves: ['worldEnder', 'empireDecree', 'thraggFist', 'finalWord'],
+        atkBuff: 10, spdBuff: 4
+      }
+    ],
+    xp: 800, gda: 700
   }
 };
 
 const SCENES = [
-  { id: 's0', num: '00', title: 'OMNI-BUNNY (TUTORIAL)', desc: 'Your father. Your hero. Your first real fight.', enemy: 'omniman', recLvl: 1, scripted: true },
-  { id: 's1', num: '01', title: 'MAULER TWINS', desc: 'They both insist they\'re the original.', enemy: 'mauler', recLvl: 2 },
-  { id: 's2', num: '02', title: 'DOC SEISMIC', desc: 'The street is shaking. So is he.', enemy: 'seismic', recLvl: 4 },
-  { id: 's3', num: '03', title: 'FLAXAN INVASION', desc: 'They come through fast. Hit faster.', enemy: 'flaxan', recLvl: 6 },
-  { id: 's4', num: '04', title: 'ANGSTROM LEVY', desc: 'He remembers a thousand versions of you.', enemy: 'angstrom', recLvl: 9 },
-  { id: 's5', num: '05', title: 'CONQUEST', desc: 'The fight that defines you.', enemy: 'conquest', recLvl: 14, boss: true }
+  // ============ EARTH ============
+  { region: 'earth', id: 's0', num: '00', title: 'OMNI-BUNNY (TUTORIAL)', desc: 'Your father. Your hero. Your first real fight.', enemy: 'omniman', recLvl: 1, scripted: true },
+  { region: 'earth', id: 's1', num: '01', title: 'MAULER TWINS', desc: 'They both insist they\'re the original.', enemy: 'mauler', recLvl: 2 },
+  { region: 'earth', id: 's2', num: '02', title: 'DOC SEISMIC', desc: 'The street is shaking. So is he.', enemy: 'seismic', recLvl: 4 },
+  { region: 'earth', id: 's3', num: '03', title: 'FLAXAN INVASION', desc: 'They come through fast. Hit faster.', enemy: 'flaxan', recLvl: 6 },
+  { region: 'earth', id: 's4', num: '04', title: 'ANGSTROM LEVY', desc: 'He remembers a thousand versions of you.', enemy: 'angstrom', recLvl: 9 },
+  { region: 'earth', id: 's5', num: '05', title: 'CONQUEST', desc: 'The fight that defines you.', enemy: 'conquest', recLvl: 14, boss: true },
+
+  // ============ MARS (unlocks after s5) ============
+  { region: 'mars', id: 'm1', num: '01', title: 'MARTIAN PRINCESS', desc: 'She rules a dying world. She\'s testing you.',  enemy: 'princess',    recLvl: 16 },
+  { region: 'mars', id: 'm2', num: '02', title: 'SEQUID SWARM',     desc: 'They split when you hit them. Hit anyway.',      enemy: 'sequid',      recLvl: 17 },
+  { region: 'mars', id: 'm3', num: '03', title: 'BATTLE BEAST',     desc: 'He wants a real fight. Survive.',                 enemy: 'battle_beast',recLvl: 19, scripted: true },
+  { region: 'mars', id: 'm4', num: '04', title: 'ALLEN THE ALIEN',  desc: 'He thinks you\'re Viltrumite scum. Prove him wrong.',enemy: 'allen_enemy', recLvl: 20, recruitsOnWin: 'allen' },
+  { region: 'mars', id: 'm5', num: '05', title: 'SPACE RACER',      desc: 'Bounty hunter on a unicycle. Don\'t laugh.',      enemy: 'space_racer', recLvl: 22 },
+  { region: 'mars', id: 'm6', num: '06', title: 'THAEDUS',          desc: 'The Viltrumite who turned. Brutal but slow.',     enemy: 'thaedus',     recLvl: 24 },
+  { region: 'mars', id: 'm7', num: '07', title: 'GENERAL KREGG',    desc: 'Thragg\'s right hand. The Empire does not forget.', enemy: 'kregg',     recLvl: 26 },
+  { region: 'mars', id: 'm8', num: '08', title: 'THRAGG',           desc: 'The Emperor. The end.',                            enemy: 'thragg',      recLvl: 30, boss: true }
 ];
 
 const SHOP_DATA = {

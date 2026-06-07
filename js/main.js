@@ -1,7 +1,7 @@
 // INVINCIBLE: SIMULATION — main shell, menus, save state
 
 const Game = (() => {
-  const SAVE_KEY = 'invincible_sim_save_v6';
+  const SAVE_KEY = 'invincible_sim_save_v7';
 
   const defaultState = () => ({
     gda: 100,
@@ -9,17 +9,21 @@ const Game = (() => {
     bag: { stim: 2 },
     suits: { classic: true },
     boughtBuffs: {},
+    chars: {
+      mark:  { id: 'mark',  level: 1, xp: 0, moves: ['punch', 'flyKick'] },
+      eve:   { id: 'eve',   level: 1, xp: 0, moves: ['pinkBlast', 'shieldWall'] },
+      allen: { id: 'allen', level: 1, xp: 0, moves: ['cosmicSlap', 'starHook'] }
+    },
+    roster: ['mark', 'eve'],      // playable party members the player has recruited
     permaBuffs: {
       mark:   { hp: 0, ep: 0, atk: 0, def: 0 },
       eve:    { hp: 0, ep: 0, atk: 0, def: 0 },
+      allen:  { hp: 0, ep: 0, atk: 0, def: 0 },
       global: { critRate: 0, xpMult: 1, gdaMult: 1 }
-    },
-    chars: {
-      mark: { id: 'mark', level: 1, xp: 0, moves: ['punch', 'flyKick'] },
-      eve:  { id: 'eve',  level: 1, xp: 0, moves: ['pinkBlast', 'shieldWall'] }
     },
     scenesDone: {},
     currentScene: null,
+    currentRegion: 'earth',       // play screen tab
     settings: { speed: 2, text: 30, blood: 'comic', shake: true, vol: 70 }
   });
 
@@ -124,9 +128,36 @@ const Router = (() => {
 function renderScenes() {
   const list = document.getElementById('scene-list');
   list.innerHTML = '';
-  SCENES.forEach((sc, i) => {
+
+  // Region tab bar
+  const conquestDone = !!Game.state.scenesDone['s5'];
+  const marsUnlocked = conquestDone;
+  const tabs = document.createElement('div');
+  tabs.className = 'region-tabs';
+  tabs.innerHTML = `
+    <button class="region-tab ${Game.state.currentRegion === 'earth' ? 'active' : ''}" data-region="earth">🌎 EARTH</button>
+    <button class="region-tab ${Game.state.currentRegion === 'mars' ? 'active' : ''} ${marsUnlocked ? '' : 'locked'}" data-region="mars">🟥 MARS ${marsUnlocked ? '' : '· LOCKED'}</button>
+  `;
+  tabs.querySelectorAll('.region-tab').forEach(t => {
+    t.addEventListener('click', () => {
+      if (t.classList.contains('locked')) {
+        flashDialogue('Defeat CONQUEST to unlock MARS.');
+        return;
+      }
+      Game.state.currentRegion = t.dataset.region;
+      Game.save();
+      renderScenes();
+    });
+  });
+  list.appendChild(tabs);
+
+  // Scene grid for current region
+  const grid = document.createElement('div');
+  grid.className = 'scene-grid';
+  const regionScenes = SCENES.filter(s => s.region === Game.state.currentRegion);
+  regionScenes.forEach((sc, i) => {
     const done = Game.state.scenesDone[sc.id];
-    const isUnlocked = i === 0 || Game.state.scenesDone[SCENES[i-1].id];
+    const isUnlocked = i === 0 || Game.state.scenesDone[regionScenes[i-1].id];
     const card = document.createElement('div');
     card.className = 'scene-card' + (isUnlocked ? '' : ' locked');
     let badge = '';
@@ -139,11 +170,10 @@ function renderScenes() {
       <div class="title-s">${sc.title}</div>
       <div class="desc">${sc.desc}</div>
     `;
-    if (isUnlocked) {
-      card.onclick = () => startScene(sc);
-    }
-    list.appendChild(card);
+    if (isUnlocked) card.onclick = () => startScene(sc);
+    grid.appendChild(card);
   });
+  list.appendChild(grid);
 }
 
 function startScene(sc) {
@@ -158,12 +188,17 @@ function startScene(sc) {
 }
 
 function renderCharSelect(sc) {
-  document.getElementById('select-scene-label').textContent =
-    `SCENE ${sc.num} · ${sc.title} — Pick your STARTER (the other tags in as bench)`;
+  const roster = Game.state.roster || ['mark', 'eve'];
+  const label = roster.length > 2
+    ? `SCENE ${sc.num} · ${sc.title} — Pick your STARTER (one of the others tags in as bench)`
+    : `SCENE ${sc.num} · ${sc.title} — Pick your STARTER (the other tags in as bench)`;
+  document.getElementById('select-scene-label').textContent = label;
   const grid = document.getElementById('select-grid');
   grid.innerHTML = '';
-  Object.values(CHARACTERS).forEach(ch => {
-    const save = Game.state.chars[ch.id];
+  roster.forEach(id => {
+    const ch = CHARACTERS[id];
+    if (!ch) return;
+    const save = Game.state.chars[id];
     const card = document.createElement('div');
     card.className = 'fighter-card';
     card.innerHTML = `
@@ -177,8 +212,13 @@ function renderCharSelect(sc) {
         <span>DEF ${Math.floor(ch.baseDEF * (1 + (save.level - 1) * 0.12))}</span>
       </div>
     `;
-    const otherId = ch.id === 'mark' ? 'eve' : 'mark';
-    card.onclick = () => launchBattle(sc, [ch.id, otherId]);
+    card.onclick = () => {
+      // Active = clicked, bench = next member in roster (skipping active)
+      const others = roster.filter(r => r !== id);
+      const benchId = others[0] || null;
+      const party = benchId ? [id, benchId] : [id];
+      launchBattle(sc, party);
+    };
     grid.appendChild(card);
   });
 }
@@ -232,16 +272,28 @@ function finishLearn() {
 }
 
 function showVictory(result, sc) {
+  // Recruitment hook
+  let recruitedLine = '';
+  if (result.win && sc.recruitsOnWin) {
+    const newMember = sc.recruitsOnWin;
+    if (!Game.state.roster.includes(newMember)) {
+      Game.state.roster.push(newMember);
+      Game.save();
+      recruitedLine = `<br><span style="color:var(--green)">✦ ${CHARACTERS[newMember].name.toUpperCase()} JOINED YOUR PARTY ✦</span>`;
+    }
+  }
+
   Router.go('victory');
   const title = document.getElementById('victory-title');
   const text = document.getElementById('victory-text');
   const gainLine = result.gda > 0 ? `<br><span style="color:var(--yellow)">+${result.gda} GDA</span>` : '';
+  const levels = Game.state.roster.map(id => `${CHARACTERS[id].name} Lv ${Game.state.chars[id].level}`).join(' · ');
   if (result.win) {
     title.textContent = 'VICTORY';
-    text.innerHTML = `${sc.title} cleared.<br>Mark Lv ${Game.state.chars.mark.level} · Eve Lv ${Game.state.chars.eve.level}${gainLine}<br>TOTAL GDA: ${Game.state.gda}`;
+    text.innerHTML = `${sc.title} cleared.${recruitedLine}<br>${levels}${gainLine}<br>TOTAL GDA: ${Game.state.gda}`;
   } else if (result.scripted) {
     title.textContent = 'STORY END';
-    text.innerHTML = `The tutorial is over.<br>Now the real fight begins.${gainLine}<br>TOTAL GDA: ${Game.state.gda}`;
+    text.innerHTML = `${sc.title} survived.<br>Now the real fight begins.${gainLine}<br>TOTAL GDA: ${Game.state.gda}`;
   } else {
     title.textContent = result.fled ? 'RETREATED' : 'DEFEATED';
     text.innerHTML = `Regroup and try again.${gainLine}<br>TOTAL GDA: ${Game.state.gda}`;
