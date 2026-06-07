@@ -540,6 +540,29 @@ const Battle = (() => {
   function enemyTurn() {
     const e = state.enemy;
     const a = active();
+
+    // SLOW CHANCE — boss winds up and skips its turn
+    if (e.char.slowChance && Math.random() < e.char.slowChance) {
+      dialogueQueue = [`${e.char.name} winds up — pausing to gather strength.`];
+      renderAll();
+      playQueue(() => showCmd('main'));
+      return;
+    }
+
+    // SELF-HEAL — boss heals itself instead of attacking
+    if (e.char.canHeal && e.hp < e.maxHP * e.char.healThreshold && Math.random() < e.char.healChance) {
+      const back = Math.min(e.char.healAmount, e.maxHP - e.hp);
+      e.hp += back;
+      playFX('bio', 'enemy');
+      dialogueQueue = [
+        e.char.healDialogue || `${e.char.name} heals!`,
+        `${e.char.name} recovered ${back} HP.`
+      ];
+      renderAll();
+      playQueue(() => showCmd('main'));
+      return;
+    }
+
     const usable = e.moves.filter(mid => e.ep >= MOVES[mid].ep);
     const mid = usable.length ? usable[Math.floor(Math.random() * usable.length)] : 'punch';
     const m = MOVES[mid];
@@ -717,18 +740,30 @@ const Battle = (() => {
   function lose() {
     dialogueQueue = [`${active().char.name} was defeated...`];
     if (state.scripted) {
+      // Scripted-loss tutorial: still pays the full reward — you completed story progress
+      const gdaMult = Game.state.permaBuffs?.global?.gdaMult || 1;
+      const reward = Math.floor((state.enemy.char.gda || 0) * gdaMult);
+      Game.state.gda += reward;
       dialogueQueue.push('The fight was always going to end this way.');
+      if (reward > 0) dialogueQueue.push(`Earned ${reward} GDA from the encounter.`);
       renderAll();
       playQueue(() => {
         Game.markSceneWon(Game.state.currentScene);
         Game.save();
-        state.onEnd({ win: false, scripted: true });
+        state.onEnd({ win: false, scripted: true, gda: reward });
       });
       return;
     }
+    // Normal loss: consolation 25% of would-be reward (rounded down) so progress isn't zero
+    const gdaMult = Game.state.permaBuffs?.global?.gdaMult || 1;
+    const consolation = Math.floor((state.enemy.char.gda || 0) * 0.25 * gdaMult);
+    if (consolation > 0) {
+      Game.state.gda += consolation;
+      dialogueQueue.push(`Consolation pay: +${consolation} GDA from GDA emergency fund.`);
+    }
     dialogueQueue.push('Retreat to base. Regroup.');
     renderAll();
-    playQueue(() => state.onEnd({ win: false }));
+    playQueue(() => { Game.save(); state.onEnd({ win: false, gda: consolation }); });
   }
 
   function flee() {

@@ -239,16 +239,18 @@ function showVictory(result, sc) {
   Router.go('victory');
   const title = document.getElementById('victory-title');
   const text = document.getElementById('victory-text');
+  const gainLine = result.gda > 0 ? `<br><span style="color:var(--yellow)">+${result.gda} GDA</span>` : '';
   if (result.win) {
     title.textContent = 'VICTORY';
-    text.innerHTML = `${sc.title} cleared.<br>Mark Lv ${Game.state.chars.mark.level} · Eve Lv ${Game.state.chars.eve.level}<br>GDA: ${Game.state.gda}`;
+    text.innerHTML = `${sc.title} cleared.<br>Mark Lv ${Game.state.chars.mark.level} · Eve Lv ${Game.state.chars.eve.level}${gainLine}<br>TOTAL GDA: ${Game.state.gda}`;
   } else if (result.scripted) {
     title.textContent = 'STORY END';
-    text.innerHTML = `The tutorial is over.<br>Now the real fight begins.`;
+    text.innerHTML = `The tutorial is over.<br>Now the real fight begins.${gainLine}<br>TOTAL GDA: ${Game.state.gda}`;
   } else {
     title.textContent = result.fled ? 'RETREATED' : 'DEFEATED';
-    text.innerHTML = `Regroup and try again.`;
+    text.innerHTML = `Regroup and try again.${gainLine}<br>TOTAL GDA: ${Game.state.gda}`;
   }
+  Game.updateHud();
   document.getElementById('victory-continue').onclick = () => Router.go('play');
 }
 

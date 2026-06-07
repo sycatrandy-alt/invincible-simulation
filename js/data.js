@@ -114,7 +114,8 @@ const ENEMIES = {
     name: 'OMNI-BUNNY',
     sprite: 'assets/omniman.png',
     tag: 'VILTRUMITE',
-    hp: 280, ep: 60, atk: 26, def: 20, spd: 18,
+    hp: 280, ep: 60, atk: 26, def: 20, spd: 10,
+    slowChance: 0.25,
     moves: ['omniSlap', 'haymaker', 'slam'],
     intro: 'OMNI-BUNNY: "Are you sure you want to do this, son?"',
     midHpDialogue: [
@@ -129,7 +130,8 @@ const ENEMIES = {
     name: 'MAULER TWINS',
     sprite: 'assets/mauler.png',
     tag: 'TECH',
-    hp: 140, ep: 30, atk: 16, def: 12, spd: 9,
+    hp: 140, ep: 30, atk: 16, def: 12, spd: 7,
+    slowChance: 0.15,
     moves: ['slam', 'bite', 'quake'],
     intro: 'TWIN A: "I\'m the original!" TWIN B: "No — *I* am!"',
     midHpDialogue: [
@@ -142,7 +144,10 @@ const ENEMIES = {
     name: 'DOC SEISMIC',
     sprite: 'assets/seismic.png',
     tag: 'TECH',
-    hp: 180, ep: 50, atk: 18, def: 10, spd: 9,
+    hp: 180, ep: 50, atk: 18, def: 10, spd: 7,
+    slowChance: 0.2,
+    canHeal: true, healAmount: 35, healThreshold: 0.5, healChance: 0.3,
+    healDialogue: 'DOC SEISMIC: "The Earth provides!" (Stone tendrils mend his wounds.)',
     moves: ['quake', 'slam', 'bite'],
     intro: 'DOC SEISMIC: "The Earth speaks. LISTEN."',
     midHpDialogue: [
@@ -155,7 +160,8 @@ const ENEMIES = {
     name: 'FLAXAN SOLDIER',
     sprite: 'assets/flaxan.png',
     tag: 'BIO',
-    hp: 200, ep: 40, atk: 16, def: 10, spd: 14,
+    hp: 200, ep: 40, atk: 16, def: 10, spd: 11,
+    slowChance: 0.1,
     moves: ['bite', 'laserBlast', 'slam'],
     intro: 'FLAXAN SOLDIER: "*kksskk* — Earth. Will. Fall."',
     midHpDialogue: [
@@ -168,7 +174,10 @@ const ENEMIES = {
     name: 'ANGSTROM LEVY',
     sprite: 'assets/angstrom.png',
     tag: 'TECH',
-    hp: 260, ep: 60, atk: 20, def: 14, spd: 15,
+    hp: 260, ep: 60, atk: 20, def: 14, spd: 9,
+    slowChance: 0.2,
+    canHeal: true, healAmount: 50, healThreshold: 0.4, healChance: 0.35,
+    healDialogue: 'ANGSTROM: "A version of me from another universe gave me this." (A green portal closes; his wounds are gone.)',
     moves: ['laserBlast', 'slam', 'quake', 'haymaker'],
     intro: 'ANGSTROM LEVY steps through a green portal. "You don\'t even remember, do you?"',
     midHpDialogue: [
@@ -183,7 +192,10 @@ const ENEMIES = {
     name: 'CONQUEST',
     sprite: 'assets/conquest.png',
     tag: 'VILTRUMITE',
-    hp: 450, ep: 100, atk: 28, def: 22, spd: 16,
+    hp: 450, ep: 100, atk: 28, def: 22, spd: 8,
+    slowChance: 0.2,
+    canHeal: true, healAmount: 70, healThreshold: 0.35, healChance: 0.3,
+    healDialogue: 'CONQUEST grins as his Viltrumite blood mends bone. "We don\'t die easy, boy."',
     moves: ['haymaker', 'uppercut', 'slam'], // phase 1 moveset
     intro: 'CONQUEST cracks his neck. "Finally. A real fight."',
     phases: [
