@@ -23,6 +23,7 @@ const Battle = (() => {
       firedDialogue: new Set(),
       scripted: !!enemyDef.scripted
     };
+    playBGM(enemyDef);
     renderAll();
     dialogueQueue = [];
     inputLocked = false;
@@ -30,6 +31,22 @@ const Battle = (() => {
     queueDialogue(`A wild ${enemyDef.name} blocks your path!`);
     queueDialogue(`What will ${active().char.name} do?`);
     playQueue(() => showCmd('main'));
+  }
+
+  function playBGM(enemyDef) {
+    const battleBgm = document.getElementById('battle-bgm');
+    const conquestBgm = document.getElementById('conquest-bgm');
+    const vol = Math.max(0, Math.min(1, (Game.state.settings.vol || 70) / 100));
+    const isConquest = enemyDef && enemyDef.name === 'CONQUEST';
+    const bgm   = isConquest ? conquestBgm : battleBgm;
+    const other = isConquest ? battleBgm : conquestBgm;
+    if (other) { other.pause(); other.currentTime = 0; }
+    if (bgm) {
+      bgm.volume = vol;
+      bgm.currentTime = 0;
+      const p = bgm.play();
+      if (p && p.catch) p.catch(err => console.log('BGM play blocked:', err));
+    }
   }
 
   function active() { return state.party[state.activeIdx]; }

@@ -109,27 +109,13 @@ const Router = (() => {
     if (name === 'shop') { renderShop('items'); }
     if (name === 'menu') Game.updateHud();
 
-    // BGM control — pick the right track per scene
-    const battleBgm = document.getElementById('battle-bgm');
-    const conquestBgm = document.getElementById('conquest-bgm');
-    const vol = Math.max(0, Math.min(1, (Game.state.settings.vol || 70) / 100));
-    const stopAll = () => {
-      [battleBgm, conquestBgm].forEach(a => { if (a) { a.pause(); a.currentTime = 0; } });
-    };
-    if (name === 'battle') {
-      const sc = SCENES.find(s => s.id === Game.state.currentScene);
-      const isConquest = sc && sc.enemy === 'conquest';
-      const bgm = isConquest ? conquestBgm : battleBgm;
-      const other = isConquest ? battleBgm : conquestBgm;
-      if (other) other.pause();
-      if (bgm) {
-        bgm.volume = vol;
-        bgm.currentTime = 0;
-        const p = bgm.play();
-        if (p && p.catch) p.catch(() => {/* autoplay blocked */});
-      }
-    } else {
-      stopAll();
+    // Only stop music here. Starting the right track is handled by Battle.start
+    // (it has the actual enemy info — Router doesn't).
+    if (name !== 'battle') {
+      ['battle-bgm', 'conquest-bgm'].forEach(id => {
+        const a = document.getElementById(id);
+        if (a) { a.pause(); a.currentTime = 0; }
+      });
     }
   }
   return { go };
