@@ -370,17 +370,20 @@ const Battle = (() => {
       });
     }
     if (e.char.phases) {
+      // Find the deepest phase the enemy now qualifies for
+      let target = state.phaseIdx;
       for (let i = e.char.phases.length - 1; i > state.phaseIdx; i--) {
-        const ph = e.char.phases[i];
-        if (hpPct <= ph.threshold) {
-          state.phaseIdx = i;
-          e.moves = ph.moves.slice();
-          if (ph.atkBuff) e.atk += ph.atkBuff;
-          if (ph.spdBuff) e.spd += ph.spdBuff;
-          showPhaseBanner('PHASE ' + (i + 1));
-          queueDialogue(ph.text);
-          break;
-        }
+        if (hpPct <= e.char.phases[i].threshold) { target = i; break; }
+      }
+      // Apply every phase the enemy skipped on the way down (accumulate buffs)
+      while (state.phaseIdx < target) {
+        state.phaseIdx++;
+        const ph = e.char.phases[state.phaseIdx];
+        e.moves = ph.moves.slice();
+        if (ph.atkBuff) e.atk += ph.atkBuff;
+        if (ph.spdBuff) e.spd += ph.spdBuff;
+        showPhaseBanner('PHASE ' + (state.phaseIdx + 1));
+        queueDialogue(ph.text);
       }
     }
   }

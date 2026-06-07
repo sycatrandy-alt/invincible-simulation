@@ -120,7 +120,6 @@ const Router = (() => {
 function renderScenes() {
   const list = document.getElementById('scene-list');
   list.innerHTML = '';
-  let unlocked = true;
   SCENES.forEach((sc, i) => {
     const done = Game.state.scenesDone[sc.id];
     const isUnlocked = i === 0 || Game.state.scenesDone[SCENES[i-1].id];
@@ -223,7 +222,9 @@ function showLearnScreen() {
 
 function finishLearn() {
   if (Game.hasPendingLearn()) return showLearnScreen();
-  showVictory({ win: true }, SCENES.find(s => s.id === Game.state.currentScene));
+  const sc = SCENES.find(s => s.id === Game.state.currentScene);
+  if (sc) showVictory({ win: true }, sc);
+  else Router.go('shop'); // came from shop tutor
 }
 
 function showVictory(result, sc) {
@@ -272,33 +273,51 @@ function renderShop(tab) {
 
 function buy(tab, item) {
   const wallet = item.currency === 'vm' ? 'vm' : 'gda';
+
+  // Pre-validate tutors so we don't deduct currency for a no-op
+  if (tab === 'tutors') {
+    const tutorMap = {
+      tutor_rage:  { charId: 'mark', moveId: 'rage' },
+      tutor_burst: { charId: 'eve',  moveId: 'burst' }
+    };
+    const t = tutorMap[item.id];
+    if (t && Game.state.chars[t.charId].moves.includes(t.moveId)) {
+      flashDialogue(`${CHARACTERS[t.charId].name} already knows ${MOVES[t.moveId].name}`);
+      return;
+    }
+  }
+
   if (Game.state[wallet] < item.price) {
     flashDialogue('Not enough ' + wallet.toUpperCase());
     return;
   }
   Game.state[wallet] -= item.price;
+
+  let queuedLearn = false;
   if (tab === 'items') {
     Game.state.bag[item.id] = (Game.state.bag[item.id] || 0) + 1;
   } else if (tab === 'suits') {
     Game.state.suits[item.id] = true;
   } else if (tab === 'tutors') {
-    if (item.id === 'tutor_rage') {
-      const c = Game.state.chars.mark;
-      if (!c.moves.includes('rage')) {
-        if (c.moves.length < 4) c.moves.push('rage');
-        else Game.queueLearn('mark', 'rage');
-      }
-    }
-    if (item.id === 'tutor_burst') {
-      const c = Game.state.chars.eve;
-      if (!c.moves.includes('burst')) {
-        if (c.moves.length < 4) c.moves.push('burst');
-      }
+    const tutorMap = {
+      tutor_rage:  { charId: 'mark', moveId: 'rage' },
+      tutor_burst: { charId: 'eve',  moveId: 'burst' }
+    };
+    const t = tutorMap[item.id];
+    if (t) {
+      const c = Game.state.chars[t.charId];
+      if (c.moves.length < 4) c.moves.push(t.moveId);
+      else { Game.queueLearn(t.charId, t.moveId); queuedLearn = true; }
     }
   }
   Game.save();
   renderShop(tab);
   flashDialogue('PURCHASED: ' + item.name, true);
+
+  // If buying triggered a pending learn, show it now instead of waiting for a battle end
+  if (queuedLearn) {
+    setTimeout(() => showLearnScreen(), 600);
+  }
 }
 
 let toastTimer = null;
