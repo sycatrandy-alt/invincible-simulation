@@ -109,17 +109,27 @@ const Router = (() => {
     if (name === 'shop') { renderShop('items'); }
     if (name === 'menu') Game.updateHud();
 
-    // BGM control — battle theme plays only on battle screen
-    const bgm = document.getElementById('battle-bgm');
-    if (bgm) {
-      if (name === 'battle') {
-        bgm.volume = Math.max(0, Math.min(1, (Game.state.settings.vol || 70) / 100));
+    // BGM control — pick the right track per scene
+    const battleBgm = document.getElementById('battle-bgm');
+    const conquestBgm = document.getElementById('conquest-bgm');
+    const vol = Math.max(0, Math.min(1, (Game.state.settings.vol || 70) / 100));
+    const stopAll = () => {
+      [battleBgm, conquestBgm].forEach(a => { if (a) { a.pause(); a.currentTime = 0; } });
+    };
+    if (name === 'battle') {
+      const sc = SCENES.find(s => s.id === Game.state.currentScene);
+      const isConquest = sc && sc.enemy === 'conquest';
+      const bgm = isConquest ? conquestBgm : battleBgm;
+      const other = isConquest ? battleBgm : conquestBgm;
+      if (other) other.pause();
+      if (bgm) {
+        bgm.volume = vol;
         bgm.currentTime = 0;
         const p = bgm.play();
-        if (p && p.catch) p.catch(() => {/* autoplay blocked — user can press SETTINGS toggle later */});
-      } else {
-        bgm.pause();
+        if (p && p.catch) p.catch(() => {/* autoplay blocked */});
       }
+    } else {
+      stopAll();
     }
   }
   return { go };
@@ -437,12 +447,15 @@ window.addEventListener('DOMContentLoaded', () => {
   bind('set-shake', 'shake');
   bind('set-vol', 'vol', Number);
 
-  // Live volume update
+  // Live volume update (apply to all BGM tracks)
   const volEl = document.getElementById('set-vol');
   if (volEl) {
     volEl.addEventListener('input', () => {
-      const bgm = document.getElementById('battle-bgm');
-      if (bgm) bgm.volume = Math.max(0, Math.min(1, Number(volEl.value) / 100));
+      const v = Math.max(0, Math.min(1, Number(volEl.value) / 100));
+      ['battle-bgm', 'conquest-bgm'].forEach(id => {
+        const a = document.getElementById(id);
+        if (a) a.volume = v;
+      });
     });
   }
 
