@@ -637,17 +637,55 @@ const Battle = (() => {
   function playFX(type, from) {
     const layer = document.getElementById('fx-layer');
     if (!layer) return;
-    const fx = document.createElement('div');
-    const cls = 'fx fx-' + type.toLowerCase() + (from === 'enemy' ? ' from-enemy' : '');
-    fx.className = cls;
-    layer.appendChild(fx);
-    setTimeout(() => fx.remove(), 900);
+    const fromEnemy = from === 'enemy';
+    const typeKey = type.toLowerCase();
+    const fromSuffix = fromEnemy ? ' from-enemy' : '';
+    const spawn = (cls, ttl) => {
+      const el = document.createElement('div');
+      el.className = 'fx ' + cls;
+      layer.appendChild(el);
+      setTimeout(() => el.remove(), ttl);
+      return el;
+    };
 
-    // Impact dust on every hit
-    const impact = document.createElement('div');
-    impact.className = 'fx fx-impact' + (from === 'enemy' ? ' from-enemy' : '');
-    layer.appendChild(impact);
-    setTimeout(() => impact.remove(), 500);
+    // 1. Screen-wide vignette flash
+    spawn('fx-flash fx-flash-' + typeKey, 350);
+
+    // 2. Charge halo at attacker's position
+    spawn('fx-charge fx-charge-' + typeKey + fromSuffix, 450);
+
+    // 3. Main move visual (after a brief charge delay)
+    setTimeout(() => {
+      spawn('fx-' + typeKey + fromSuffix, 900);
+
+      // 4. Impact burst at target
+      spawn('fx-impact fx-impact-' + typeKey + fromSuffix, 600);
+
+      // 5. Particle ring radiating from target
+      const partCount = (typeKey === 'physical') ? 12 : (typeKey === 'cosmic' ? 14 : (typeKey === 'energy' ? 10 : 8));
+      for (let i = 0; i < partCount; i++) {
+        const p = document.createElement('div');
+        p.className = 'fx fx-particle fx-particle-' + typeKey + fromSuffix;
+        const angle = (i / partCount) * 360 + Math.random() * 20;
+        const dist = 80 + Math.random() * 120;
+        p.style.setProperty('--angle', angle + 'deg');
+        p.style.setProperty('--dist', dist + 'px');
+        p.style.animationDelay = (i * 0.015) + 's';
+        layer.appendChild(p);
+        setTimeout(() => p.remove(), 900);
+      }
+
+      // 6. Crack lines from impact (for high-impact types)
+      if (['physical', 'cosmic'].includes(typeKey)) {
+        for (let i = 0; i < 4; i++) {
+          const c = document.createElement('div');
+          c.className = 'fx fx-crack fx-crack-' + typeKey + fromSuffix;
+          c.style.setProperty('--rot', (i * 45 + Math.random() * 30 - 15) + 'deg');
+          layer.appendChild(c);
+          setTimeout(() => c.remove(), 700);
+        }
+      }
+    }, 150);
   }
 
   function win() {

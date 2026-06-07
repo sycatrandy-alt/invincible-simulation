@@ -1075,153 +1075,314 @@ button { font-family: inherit; }
   margin-top: 4px;
 }
 
-/* ============ FX LAYER ============ */
-.fx-layer {
-  position: absolute;
+/* ============================================================
+   FX LAYER — multi-stage cinematic move animations
+   Each move spawns: screen flash + charge halo + main visual
+   + impact burst + radial particles + (optional) cracks
+   ============================================================ */
+.fx-layer { position: absolute; inset: 0; pointer-events: none; z-index: 5; overflow: hidden; }
+.fx { position: absolute; pointer-events: none; will-change: transform, opacity; }
+
+/* Target & source anchor points (right side = enemy, left side = player) */
+:root {
+  --target-x: 70%;   --target-y: 35%;
+  --source-x: 30%;   --source-y: 65%;
+}
+
+/* ---------- 1. SCREEN-WIDE VIGNETTE FLASH ---------- */
+.fx-flash {
   inset: 0;
-  pointer-events: none;
-  z-index: 5;
+  mix-blend-mode: screen;
+  animation: flashHit 0.35s cubic-bezier(.2,.9,.3,1);
 }
-.fx {
-  position: absolute;
-  pointer-events: none;
+.fx-flash-energy   { background: radial-gradient(circle at 60% 40%, rgba(0,229,255,0.55), transparent 70%); }
+.fx-flash-physical { background: radial-gradient(circle at 60% 40%, rgba(255,255,255,0.65), transparent 70%); }
+.fx-flash-cosmic   { background: radial-gradient(circle at 60% 40%, rgba(255,43,214,0.55), transparent 70%); }
+.fx-flash-bio      { background: radial-gradient(circle at 60% 40%, rgba(154,108,255,0.5), transparent 70%); }
+.fx-flash-tech     { background: radial-gradient(circle at 60% 40%, rgba(52,255,154,0.45), transparent 70%); }
+.fx-flash-mental   { background: radial-gradient(circle at 60% 40%, rgba(255,212,0,0.5), transparent 70%); }
+@keyframes flashHit {
+  0%   { opacity: 0; }
+  20%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 
-/* Energy beam: cyan horizontal sweep */
+/* ---------- 2. CHARGE HALO (at attacker) ---------- */
+.fx-charge {
+  left: var(--source-x); top: var(--source-y);
+  width: 200px; height: 200px;
+  margin-left: -100px; margin-top: -100px;
+  border-radius: 50%;
+  animation: chargeUp 0.4s cubic-bezier(.4,0,.2,1);
+}
+.fx-charge.from-enemy { left: var(--target-x); top: var(--target-y); }
+.fx-charge-energy   { background: radial-gradient(circle, rgba(0,229,255,0.95), transparent 60%); box-shadow: 0 0 80px var(--cyan); }
+.fx-charge-physical { background: radial-gradient(circle, rgba(255,47,79,0.85), transparent 60%); box-shadow: 0 0 80px var(--red); }
+.fx-charge-cosmic   { background: radial-gradient(circle, rgba(255,43,214,0.9), transparent 60%); box-shadow: 0 0 90px var(--magenta); }
+.fx-charge-bio      { background: radial-gradient(circle, rgba(154,108,255,0.85), transparent 60%); box-shadow: 0 0 70px #9a6cff; }
+.fx-charge-tech     { background: radial-gradient(circle, rgba(52,255,154,0.85), transparent 60%); box-shadow: 0 0 70px var(--green); }
+.fx-charge-mental   { background: radial-gradient(circle, rgba(255,212,0,0.85), transparent 60%); box-shadow: 0 0 70px var(--yellow); }
+@keyframes chargeUp {
+  0%   { transform: scale(0.3); opacity: 0; }
+  60%  { transform: scale(1.6); opacity: 1; }
+  100% { transform: scale(0.6); opacity: 0; }
+}
+
+/* ---------- 3. MAIN MOVE VISUAL ---------- */
+
+/* ENERGY → thick triple-layer beam from source to target */
 .fx-energy {
-  top: 45%; left: 0; right: 0;
-  height: 16px;
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(0,229,255,0.8) 30%,
-    #fff 50%,
-    rgba(0,229,255,0.8) 70%,
-    transparent 100%);
-  box-shadow: 0 0 30px var(--cyan), 0 0 60px var(--cyan);
-  filter: blur(1px);
-  animation: beamSweep 0.65s ease;
+  top: var(--source-y); left: var(--source-x);
+  width: 0; height: 28px;
+  margin-top: -14px;
+  background:
+    linear-gradient(90deg, rgba(0,229,255,0.2) 0%, #fff 40%, #fff 60%, rgba(0,229,255,0.2) 100%);
+  box-shadow:
+    0 0 24px var(--cyan),
+    0 0 48px var(--cyan),
+    0 0 80px rgba(0,229,255,0.8),
+    inset 0 0 12px #fff;
+  border-radius: 14px;
+  transform-origin: left center;
+  animation: beamFire 0.55s cubic-bezier(.2,.9,.3,1);
 }
-.fx-energy.from-enemy { animation: beamSweepRev 0.65s ease; }
-@keyframes beamSweep {
-  0% { transform: scaleX(0) translateX(-50%); opacity: 0; }
-  30% { transform: scaleX(1) translateX(0); opacity: 1; }
-  100% { transform: scaleX(1) translateX(0); opacity: 0; }
+.fx-energy.from-enemy {
+  top: var(--target-y); left: var(--target-x);
+  transform-origin: right center;
+  animation: beamFireRev 0.55s cubic-bezier(.2,.9,.3,1);
 }
-@keyframes beamSweepRev {
-  0% { transform: scaleX(0) translateX(50%); opacity: 0; }
-  30% { transform: scaleX(1) translateX(0); opacity: 1; }
-  100% { transform: scaleX(1) translateX(0); opacity: 0; }
+@keyframes beamFire {
+  0%   { width: 0; opacity: 0; filter: blur(8px); }
+  20%  { width: 50%; opacity: 1; filter: blur(0); }
+  80%  { width: 50%; opacity: 1; }
+  100% { opacity: 0; transform: scaleY(0.3); }
+}
+@keyframes beamFireRev {
+  0%   { width: 0; opacity: 0; right: var(--source-x); filter: blur(8px); }
+  20%  { width: 50%; opacity: 1; filter: blur(0); }
+  80%  { width: 50%; opacity: 1; }
+  100% { opacity: 0; transform: scaleY(0.3); }
 }
 
-/* Physical: slash arc */
+/* PHYSICAL → multi-slash arcs + speed lines */
 .fx-physical {
-  top: 20%; left: 55%;
-  width: 360px; height: 360px;
+  top: var(--target-y); left: var(--target-x);
+  width: 480px; height: 480px;
+  margin-top: -240px; margin-left: -240px;
   background:
-    linear-gradient(135deg,
-      transparent 42%,
-      rgba(255,255,255,0.95) 49%,
-      #fff 50%,
-      rgba(255,255,255,0.95) 51%,
-      transparent 58%);
-  filter: drop-shadow(0 0 12px #fff) drop-shadow(0 0 20px var(--red));
-  animation: slashArc 0.45s ease;
+    linear-gradient(105deg, transparent 46%, #fff 49%, #fff 51%, transparent 54%),
+    linear-gradient(80deg,  transparent 47%, rgba(255,255,255,0.7) 49%, rgba(255,255,255,0.7) 51%, transparent 53%),
+    linear-gradient(125deg, transparent 47%, rgba(255,255,255,0.5) 49%, rgba(255,255,255,0.5) 51%, transparent 53%);
+  filter: drop-shadow(0 0 16px #fff) drop-shadow(0 0 32px var(--red)) drop-shadow(0 0 60px var(--red));
   transform-origin: center;
+  animation: slashHit 0.5s cubic-bezier(.2,.9,.3,1);
 }
 .fx-physical.from-enemy {
-  left: 5%;
+  top: var(--source-y); left: var(--source-x);
   background:
-    linear-gradient(45deg,
-      transparent 42%,
-      rgba(255,255,255,0.95) 49%,
-      #fff 50%,
-      rgba(255,255,255,0.95) 51%,
-      transparent 58%);
+    linear-gradient(75deg,  transparent 46%, #fff 49%, #fff 51%, transparent 54%),
+    linear-gradient(100deg, transparent 47%, rgba(255,255,255,0.7) 49%, rgba(255,255,255,0.7) 51%, transparent 53%),
+    linear-gradient(55deg,  transparent 47%, rgba(255,255,255,0.5) 49%, rgba(255,255,255,0.5) 51%, transparent 53%);
 }
-@keyframes slashArc {
-  0% { transform: scale(0.4) rotate(-30deg); opacity: 0; }
-  40% { transform: scale(1.1) rotate(0deg); opacity: 1; }
-  100% { transform: scale(1.4) rotate(20deg); opacity: 0; }
+@keyframes slashHit {
+  0%   { transform: scale(0.5) rotate(-40deg); opacity: 0; }
+  30%  { transform: scale(1.2) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1.5) rotate(15deg); opacity: 0; }
 }
 
-/* Cosmic: pink expanding burst */
+/* COSMIC → concentric pink rings + star burst */
 .fx-cosmic {
-  top: 50%; left: 50%;
+  top: var(--target-y); left: var(--target-x);
+  width: 200px; height: 200px;
+  margin-top: -100px; margin-left: -100px;
+  border-radius: 50%;
+  border: 5px solid var(--magenta);
+  background:
+    radial-gradient(circle, rgba(255,43,214,0.8) 0%, rgba(255,43,214,0.3) 30%, transparent 60%);
+  box-shadow:
+    0 0 60px var(--magenta),
+    0 0 120px var(--magenta),
+    inset 0 0 60px var(--magenta),
+    inset 0 0 30px #fff;
+  animation: cosmicHit 0.8s cubic-bezier(.2,.9,.3,1);
+}
+.fx-cosmic.from-enemy { top: var(--source-y); left: var(--source-x); }
+.fx-cosmic::before, .fx-cosmic::after {
+  content: '';
+  position: absolute;
+  inset: -40px;
+  border: 2px solid var(--magenta);
+  border-radius: 50%;
+  animation: cosmicRing 0.8s ease-out;
+}
+.fx-cosmic::after {
+  inset: -80px;
+  border-color: rgba(255,43,214,0.4);
+  animation-delay: 0.1s;
+}
+@keyframes cosmicHit {
+  0%   { transform: scale(0.2) rotate(0deg); opacity: 0; }
+  25%  { transform: scale(1.2) rotate(60deg); opacity: 1; }
+  100% { transform: scale(3.5) rotate(180deg); opacity: 0; border-width: 1px; }
+}
+@keyframes cosmicRing {
+  0%   { transform: scale(0.3); opacity: 0; }
+  40%  { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* BIO → purple veiny pulse with chaotic dashed ring */
+.fx-bio {
+  top: var(--target-y); left: var(--target-x);
+  width: 320px; height: 320px;
+  margin-top: -160px; margin-left: -160px;
+  background:
+    radial-gradient(circle, rgba(154,108,255,0.85) 0%, rgba(255,43,214,0.4) 40%, transparent 70%);
+  border: 4px dashed var(--magenta);
+  border-radius: 50%;
+  filter: drop-shadow(0 0 24px #9a6cff) drop-shadow(0 0 48px var(--magenta));
+  animation: bioInfect 0.7s cubic-bezier(.4,0,.2,1);
+}
+.fx-bio.from-enemy { top: var(--source-y); left: var(--source-x); }
+.fx-bio::before {
+  content: '';
+  position: absolute; inset: 20px;
+  border: 2px dashed rgba(154,108,255,0.7);
+  border-radius: 50%;
+  animation: bioSwirl 0.7s linear;
+}
+@keyframes bioInfect {
+  0%   { transform: scale(0.4) rotate(0deg); opacity: 0; }
+  30%  { transform: scale(1.1) rotate(40deg); opacity: 1; }
+  100% { transform: scale(1.7) rotate(120deg); opacity: 0; }
+}
+@keyframes bioSwirl {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* TECH → green hex-grid box with corner brackets + scan line */
+.fx-tech {
+  top: var(--target-y); left: var(--target-x);
+  width: 320px; height: 320px;
+  margin-top: -160px; margin-left: -160px;
+  background:
+    linear-gradient(transparent 90%, var(--green) 90%) 0 0 / 28px 28px,
+    linear-gradient(90deg, transparent 90%, var(--green) 90%) 0 0 / 28px 28px;
+  border: 3px solid var(--green);
+  box-shadow: 0 0 32px var(--green), inset 0 0 32px rgba(52,255,154,0.4);
+  animation: techLock 0.7s cubic-bezier(.2,.9,.3,1);
+}
+.fx-tech.from-enemy { top: var(--source-y); left: var(--source-x); }
+.fx-tech::before, .fx-tech::after {
+  content: '';
+  position: absolute;
+  width: 30px; height: 30px;
+  border: 3px solid var(--green);
+}
+.fx-tech::before { top: -3px; left: -3px; border-right: none; border-bottom: none; }
+.fx-tech::after  { bottom: -3px; right: -3px; border-left: none; border-top: none; }
+@keyframes techLock {
+  0%   { transform: scale(0.6) rotate(-15deg); opacity: 0; filter: blur(8px); }
+  35%  { transform: scale(1) rotate(0deg); opacity: 1; filter: blur(0); }
+  70%  { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.2); opacity: 0; }
+}
+
+/* MENTAL → expanding yellow concentric rings */
+.fx-mental {
+  top: var(--target-y); left: var(--target-x);
   width: 80px; height: 80px;
   margin-top: -40px; margin-left: -40px;
-  border: 4px solid var(--magenta);
+  border: 6px solid var(--yellow);
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,43,214,0.6), transparent 70%);
-  box-shadow: 0 0 40px var(--magenta), inset 0 0 30px var(--magenta);
-  animation: cosmicBurst 0.7s ease;
+  box-shadow: 0 0 60px var(--yellow), inset 0 0 30px var(--yellow);
+  animation: mentalBoom 0.8s cubic-bezier(.2,.9,.3,1);
 }
-@keyframes cosmicBurst {
-  0% { transform: scale(0.3); opacity: 0; }
-  30% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(4); opacity: 0; border-width: 1px; }
-}
-
-/* Bio: dark chomp lines */
-.fx-bio {
-  top: 30%; left: 50%;
-  width: 240px; height: 240px;
-  margin-left: -120px;
-  background:
-    radial-gradient(circle, rgba(154,108,255,0.7), transparent 60%);
-  border: 3px dashed var(--magenta);
+.fx-mental.from-enemy { top: var(--source-y); left: var(--source-x); }
+.fx-mental::before, .fx-mental::after {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  border: 3px solid var(--yellow);
   border-radius: 50%;
-  animation: bioPulse 0.6s ease;
+  animation: mentalBoom 0.8s cubic-bezier(.2,.9,.3,1);
+  animation-delay: 0.1s;
 }
-@keyframes bioPulse {
-  0% { transform: scale(0.6); opacity: 0; }
-  30% { transform: scale(1.1) rotate(15deg); opacity: 1; }
-  100% { transform: scale(1.6) rotate(45deg); opacity: 0; }
+.fx-mental::after {
+  inset: -50px;
+  border-width: 2px;
+  animation-delay: 0.2s;
 }
-
-/* Tech: green grid pulse */
-.fx-tech {
-  top: 30%; left: 30%; right: 30%; bottom: 30%;
-  background:
-    linear-gradient(transparent 90%, var(--green) 90%) 0 0 / 24px 24px,
-    linear-gradient(90deg, transparent 90%, var(--green) 90%) 0 0 / 24px 24px;
-  border: 2px solid var(--green);
-  box-shadow: 0 0 30px var(--green);
-  animation: techPulse 0.6s ease;
-}
-@keyframes techPulse {
-  0% { transform: scale(0.5); opacity: 0; }
-  40% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1.3); opacity: 0; }
+@keyframes mentalBoom {
+  0%   { transform: scale(0.2); opacity: 1; }
+  100% { transform: scale(8); opacity: 0; border-width: 1px; }
 }
 
-/* Mental: yellow shockwave ring */
-.fx-mental {
-  top: 50%; left: 50%;
-  width: 60px; height: 60px;
-  margin-top: -30px; margin-left: -30px;
-  border: 4px solid var(--yellow);
-  border-radius: 50%;
-  box-shadow: 0 0 40px var(--yellow);
-  animation: mentalRing 0.7s ease;
-}
-@keyframes mentalRing {
-  0% { transform: scale(0.2); opacity: 1; border-width: 8px; }
-  100% { transform: scale(6); opacity: 0; border-width: 1px; }
-}
-
-/* Impact dust on every hit */
+/* ---------- 4. IMPACT BURST (at target) ---------- */
 .fx-impact {
-  top: 40%; left: 60%;
-  width: 200px; height: 200px;
-  margin-left: -100px;
-  background: radial-gradient(circle, rgba(255,255,255,0.9), transparent 60%);
-  animation: impactFlash 0.35s ease;
+  top: var(--target-y); left: var(--target-x);
+  width: 280px; height: 280px;
+  margin-top: -140px; margin-left: -140px;
+  border-radius: 50%;
+  animation: impactBurst 0.45s cubic-bezier(.2,.9,.3,1);
 }
-.fx-impact.from-enemy { left: 25%; }
-@keyframes impactFlash {
-  0% { transform: scale(0.2); opacity: 0; }
-  20% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(2); opacity: 0; }
+.fx-impact.from-enemy { top: var(--source-y); left: var(--source-x); }
+.fx-impact-energy   { background: radial-gradient(circle, rgba(0,229,255,1), rgba(255,255,255,0.9) 30%, transparent 65%); box-shadow: 0 0 80px var(--cyan); }
+.fx-impact-physical { background: radial-gradient(circle, #fff, rgba(255,47,79,0.6) 30%, transparent 65%); box-shadow: 0 0 80px var(--red); }
+.fx-impact-cosmic   { background: radial-gradient(circle, #fff, rgba(255,43,214,0.8) 30%, transparent 65%); box-shadow: 0 0 100px var(--magenta); }
+.fx-impact-bio      { background: radial-gradient(circle, rgba(154,108,255,1), rgba(255,43,214,0.6) 30%, transparent 65%); box-shadow: 0 0 80px #9a6cff; }
+.fx-impact-tech     { background: radial-gradient(circle, rgba(52,255,154,1), rgba(255,255,255,0.5) 30%, transparent 65%); box-shadow: 0 0 80px var(--green); }
+.fx-impact-mental   { background: radial-gradient(circle, rgba(255,212,0,1), rgba(255,255,255,0.5) 30%, transparent 65%); box-shadow: 0 0 80px var(--yellow); }
+@keyframes impactBurst {
+  0%   { transform: scale(0.1); opacity: 0; }
+  20%  { transform: scale(1.1); opacity: 1; }
+  60%  { transform: scale(1.4); opacity: 0.7; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* ---------- 5. RADIAL PARTICLES ---------- */
+.fx-particle {
+  top: var(--target-y); left: var(--target-x);
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) translateX(0);
+  animation: particleFly 0.7s ease-out forwards;
+}
+.fx-particle.from-enemy { top: var(--source-y); left: var(--source-x); }
+.fx-particle-energy   { background: var(--cyan); box-shadow: 0 0 12px var(--cyan), 0 0 24px var(--cyan); }
+.fx-particle-physical { background: #fff; box-shadow: 0 0 10px #fff, 0 0 20px var(--red); width: 4px; height: 14px; border-radius: 2px; }
+.fx-particle-cosmic   { background: var(--magenta); box-shadow: 0 0 14px var(--magenta), 0 0 28px var(--magenta); }
+.fx-particle-bio      { background: #9a6cff; box-shadow: 0 0 12px #9a6cff; }
+.fx-particle-tech     { background: var(--green); box-shadow: 0 0 12px var(--green); width: 8px; height: 2px; border-radius: 0; }
+.fx-particle-mental   { background: var(--yellow); box-shadow: 0 0 14px var(--yellow); }
+@keyframes particleFly {
+  0%   { transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) translateX(0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) translateX(var(--dist, 100px)); opacity: 0; }
+}
+
+/* ---------- 6. CRACK LINES ---------- */
+.fx-crack {
+  top: var(--target-y); left: var(--target-x);
+  width: 280px; height: 4px;
+  margin-top: -2px; margin-left: -140px;
+  transform-origin: 50% 50%;
+  transform: rotate(var(--rot, 0deg));
+  animation: crackOut 0.6s cubic-bezier(.2,.9,.3,1);
+}
+.fx-crack.from-enemy { top: var(--source-y); left: var(--source-x); }
+.fx-crack-physical {
+  background: linear-gradient(90deg, transparent 0%, #fff 30%, #fff 70%, transparent 100%);
+  box-shadow: 0 0 12px #fff, 0 0 24px var(--red);
+}
+.fx-crack-cosmic {
+  background: linear-gradient(90deg, transparent 0%, var(--magenta) 30%, #fff 50%, var(--magenta) 70%, transparent 100%);
+  box-shadow: 0 0 12px var(--magenta), 0 0 24px var(--magenta);
+}
+@keyframes crackOut {
+  0%   { transform: rotate(var(--rot, 0deg)) scaleX(0); opacity: 0; }
+  30%  { transform: rotate(var(--rot, 0deg)) scaleX(1); opacity: 1; }
+  100% { transform: rotate(var(--rot, 0deg)) scaleX(1.2); opacity: 0; }
 }
 
 /* PHASE BANNER */
