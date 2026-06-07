@@ -1,7 +1,7 @@
 // INVINCIBLE: SIMULATION — main shell, menus, save state
 
 const Game = (() => {
-  const SAVE_KEY = 'invincible_sim_save_v7';
+  const SAVE_KEY = 'invincible_sim_save_v8';
 
   const defaultState = () => ({
     gda: 100,
@@ -62,7 +62,7 @@ const Game = (() => {
     if (sc) sc.textContent = `GDA: ${state.gda} · VM: ${state.vm}`;
   }
 
-  function xpForNext(lvl) { return 30 + lvl * 25; }
+  function xpForNext(lvl) { return 60 + lvl * 55; }
 
   function gainXP(charId, amount) {
     const c = state.chars[charId];

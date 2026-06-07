@@ -174,7 +174,7 @@ const Battle = (() => {
         return;
       }
       setDialogue(dialogueQueue.shift());
-      setTimeout(step, 1300);
+      setTimeout(step, 1700);
     };
     step();
   }
@@ -284,7 +284,7 @@ const Battle = (() => {
     const tagMult = (TYPE_CHART[move.type] && TYPE_CHART[move.type][defenderTag]) || 1;
     const variance = 0.85 + Math.random() * 0.3;
     const critBonus = attackerIsPlayer ? (Game.state.permaBuffs?.global?.critRate || 0) : 0;
-    const crit = Math.random() < (0.0625 + critBonus) ? 1.5 : 1;
+    const crit = Math.random() < (0.04 + critBonus) ? 1.5 : 1;
     let dmg = Math.floor(base * ratio * tagMult * variance * crit);
     return { dmg, tagMult, crit: crit > 1 };
   }
@@ -566,8 +566,8 @@ const Battle = (() => {
     if (state.party.length > 1) {
       const b = bench();
       if (b.hp > 0) {
-        b.hp = Math.min(b.maxHP, b.hp + Math.floor(b.maxHP * 0.05));
-        b.ep = Math.min(b.maxEP, b.ep + 2);
+        b.hp = Math.min(b.maxHP, b.hp + Math.floor(b.maxHP * 0.03));
+        b.ep = Math.min(b.maxEP, b.ep + 1);
       }
     }
     state.turnCount++;
@@ -791,9 +791,9 @@ const Battle = (() => {
       });
       return;
     }
-    // Normal loss: consolation 25% of would-be reward (rounded down) so progress isn't zero
+    // Normal loss: consolation 12% of would-be reward (small, but never zero)
     const gdaMult = Game.state.permaBuffs?.global?.gdaMult || 1;
-    const consolation = Math.floor((state.enemy.char.gda || 0) * 0.25 * gdaMult);
+    const consolation = Math.floor((state.enemy.char.gda || 0) * 0.12 * gdaMult);
     if (consolation > 0) {
       Game.state.gda += consolation;
       dialogueQueue.push(`Consolation pay: +${consolation} GDA from GDA emergency fund.`);
