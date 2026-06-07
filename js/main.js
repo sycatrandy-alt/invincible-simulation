@@ -1,13 +1,19 @@
 // INVINCIBLE: SIMULATION — main shell, menus, save state
 
 const Game = (() => {
-  const SAVE_KEY = 'invincible_sim_save_v5';
+  const SAVE_KEY = 'invincible_sim_save_v6';
 
   const defaultState = () => ({
     gda: 100,
-    vm: 0,
+    vm: 5,
     bag: { stim: 2 },
     suits: { classic: true },
+    boughtBuffs: {},
+    permaBuffs: {
+      mark:   { hp: 0, ep: 0, atk: 0, def: 0 },
+      eve:    { hp: 0, ep: 0, atk: 0, def: 0 },
+      global: { critRate: 0, xpMult: 1, gdaMult: 1 }
+    },
     chars: {
       mark: { id: 'mark', level: 1, xp: 0, moves: ['punch', 'flyKick'] },
       eve:  { id: 'eve',  level: 1, xp: 0, moves: ['pinkBlast', 'shieldWall'] }
@@ -56,6 +62,8 @@ const Game = (() => {
 
   function gainXP(charId, amount) {
     const c = state.chars[charId];
+    const mult = state.permaBuffs?.global?.xpMult || 1;
+    amount = Math.floor(amount * mult);
     c.xp += amount;
     let leveled = false;
     while (c.xp >= xpForNext(c.level)) {
@@ -255,10 +263,22 @@ function renderShop(tab) {
   items.forEach(item => {
     const card = document.createElement('div');
     card.className = 'shop-item';
-    const owned = tab === 'suits' && (Game.state.suits[item.id] || item.owned);
+    let owned = false;
+    if (tab === 'suits') owned = !!(Game.state.suits[item.id] || item.owned);
+    else if (tab === 'buffs') owned = !!Game.state.boughtBuffs[item.id];
+    else if (tab === 'tutors') {
+      const t = TUTOR_MAP[item.id];
+      if (t) owned = Game.state.chars[t.charId].moves.includes(t.moveId);
+    }
+
+    const stockLine = tab === 'items'
+      ? `<div class="istock">OWNED: ${Game.state.bag[item.id] || 0}</div>`
+      : '';
+
     card.innerHTML = `
       <div class="iname">${item.name}</div>
       <div class="idesc">${item.desc}</div>
+      ${stockLine}
       <div class="iprice">${item.price} ${item.currency.toUpperCase()}</div>
       <button>${owned ? 'OWNED' : 'BUY'}</button>
     `;
@@ -271,20 +291,43 @@ function renderShop(tab) {
   });
 }
 
+// Map every tutor id to its target character + move
+const TUTOR_MAP = {
+  tutor_rage:      { charId: 'mark', moveId: 'rage' },
+  tutor_thrust:    { charId: 'mark', moveId: 'thrust' },
+  tutor_double:    { charId: 'mark', moveId: 'doubleStrike' },
+  tutor_sky:       { charId: 'mark', moveId: 'skybreak' },
+  tutor_viltrum:   { charId: 'mark', moveId: 'viltrumStrike' },
+  tutor_blood:     { charId: 'mark', moveId: 'bloodFist' },
+  tutor_nova:      { charId: 'mark', moveId: 'novaBeam' },
+  tutor_emp:       { charId: 'mark', moveId: 'empGrid' },
+  tutor_burst:     { charId: 'eve',  moveId: 'burst' },
+  tutor_pshield:   { charId: 'eve',  moveId: 'pinkShield' },
+  tutor_novaburst: { charId: 'eve',  moveId: 'novaBurst' },
+  tutor_rain:      { charId: 'eve',  moveId: 'pinkRain' },
+  tutor_atomic:    { charId: 'eve',  moveId: 'atomicEdge' },
+  tutor_heal:      { charId: 'eve',  moveId: 'healingPulse' },
+  tutor_melt:      { charId: 'eve',  moveId: 'meltdown' }
+};
+
 function buy(tab, item) {
   const wallet = item.currency === 'vm' ? 'vm' : 'gda';
 
   // Pre-validate tutors so we don't deduct currency for a no-op
   if (tab === 'tutors') {
-    const tutorMap = {
-      tutor_rage:  { charId: 'mark', moveId: 'rage' },
-      tutor_burst: { charId: 'eve',  moveId: 'burst' }
-    };
-    const t = tutorMap[item.id];
+    const t = TUTOR_MAP[item.id];
     if (t && Game.state.chars[t.charId].moves.includes(t.moveId)) {
       flashDialogue(`${CHARACTERS[t.charId].name} already knows ${MOVES[t.moveId].name}`);
       return;
     }
+  }
+  if (tab === 'buffs' && Game.state.boughtBuffs[item.id]) {
+    flashDialogue('Already owned.');
+    return;
+  }
+  if (tab === 'suits' && Game.state.suits[item.id]) {
+    flashDialogue('Already owned.');
+    return;
   }
 
   if (Game.state[wallet] < item.price) {
@@ -299,22 +342,24 @@ function buy(tab, item) {
   } else if (tab === 'suits') {
     Game.state.suits[item.id] = true;
   } else if (tab === 'tutors') {
-    const tutorMap = {
-      tutor_rage:  { charId: 'mark', moveId: 'rage' },
-      tutor_burst: { charId: 'eve',  moveId: 'burst' }
-    };
-    const t = tutorMap[item.id];
+    const t = TUTOR_MAP[item.id];
     if (t) {
       const c = Game.state.chars[t.charId];
       if (c.moves.length < 4) c.moves.push(t.moveId);
       else { Game.queueLearn(t.charId, t.moveId); queuedLearn = true; }
+    }
+  } else if (tab === 'buffs') {
+    Game.state.boughtBuffs[item.id] = true;
+    if (item.char) {
+      Game.state.permaBuffs[item.char][item.stat] += item.amt;
+    } else if (item.global) {
+      Game.state.permaBuffs.global[item.global] += item.amt;
     }
   }
   Game.save();
   renderShop(tab);
   flashDialogue('PURCHASED: ' + item.name, true);
 
-  // If buying triggered a pending learn, show it now instead of waiting for a battle end
   if (queuedLearn) {
     setTimeout(() => showLearnScreen(), 600);
   }

@@ -42,7 +42,24 @@ const MOVES = {
   omniSlap:    { name: 'OMNI SLAP',    type: 'PHYSICAL', power: 90, ep: 0,  desc: 'A father\'s hand. Devastating.' },
   maceCrush:   { name: 'MACE CRUSH',   type: 'PHYSICAL', power: 65, ep: 16, desc: 'Two-handed downward smash.' },
   bloodRage:   { name: 'BLOOD RAGE',   type: 'PHYSICAL', power: 80, ep: 20, desc: 'No restraint. No tomorrow.' },
-  finalWord:   { name: 'FINAL WORD',   type: 'COSMIC',   power: 110, ep: 30, desc: 'The fight ends here.' }
+  finalWord:   { name: 'FINAL WORD',   type: 'COSMIC',   power: 110, ep: 30, desc: 'The fight ends here.' },
+
+  // ===== SHOP TUTOR MOVES (Mark) =====
+  thrust:       { name: 'THRUST',       type: 'PHYSICAL', power: 24, ep: 3,  desc: 'Quick spear-strike with both hands.' },
+  doubleStrike: { name: 'DOUBLE STRIKE',type: 'PHYSICAL', power: 22, ep: 8,  desc: 'Hits twice in one turn.' },
+  skybreak:     { name: 'SKYBREAK',     type: 'PHYSICAL', power: 70, ep: 22, desc: 'Drop from orbit. Crater impact.' },
+  viltrumStrike:{ name: 'VILTRUM STRIKE',type: 'COSMIC',  power: 75, ep: 22, desc: 'A move only your blood can throw.' },
+  bloodFist:    { name: 'BLOOD FIST',   type: 'PHYSICAL', power: 95, ep: 28, desc: 'You feel it crack. Yours? His? Both.' },
+  novaBeam:     { name: 'NOVA BEAM',    type: 'COSMIC',   power: 68, ep: 18, desc: 'Stare. Concentrate. Detonate.' },
+  empGrid:      { name: 'EMP GRID',     type: 'TECH',     power: 50, ep: 14, desc: 'Frame the enemy in a static lattice.' },
+
+  // ===== SHOP TUTOR MOVES (Eve) =====
+  pinkShield:   { name: 'PINK SHIELD',  type: 'ENERGY',   power: 0,  ep: 8,  desc: 'Full damage block — single hit only.' },
+  novaBurst:    { name: 'NOVA BURST',   type: 'ENERGY',   power: 64, ep: 20, desc: 'Detonate a sphere of pink matter.' },
+  pinkRain:     { name: 'PINK RAIN',    type: 'COSMIC',   power: 38, ep: 16, desc: 'Shard fall. Wide hit.' },
+  atomicEdge:   { name: 'ATOMIC EDGE',  type: 'COSMIC',   power: 78, ep: 24, desc: 'Reshape the atoms of the air into blades.' },
+  healingPulse: { name: 'HEALING PULSE',type: 'BIO',      power: 0,  ep: 16, desc: 'Restore 60% HP to the active fighter.' },
+  meltdown:     { name: 'MELTDOWN',     type: 'BIO',      power: 88, ep: 26, desc: 'Force the enemy\'s cells to come apart.' }
 };
 
 const UTILITIES = {
@@ -204,17 +221,101 @@ const SCENES = [
 
 const SHOP_DATA = {
   items: [
-    { id: 'stim',    name: 'GDA STIM',    desc: 'Restore 50 HP in battle.', price: 50, currency: 'gda' },
-    { id: 'patch',   name: 'AURA PATCH',  desc: 'Restore 30 HP + 10 EP.',   price: 80, currency: 'gda' },
-    { id: 'revive',  name: 'REVIVE',      desc: 'Survive a lethal hit.',     price: 200, currency: 'gda' }
+    // ----- HEALING -----
+    { id: 'stim',        name: 'GDA STIM',       desc: 'Restore 50 HP in battle.',         price: 50,  currency: 'gda' },
+    { id: 'patch',       name: 'AURA PATCH',     desc: 'Restore 30 HP + 10 EP.',           price: 80,  currency: 'gda' },
+    { id: 'mega_stim',   name: 'MEGA STIM',      desc: 'Restore 100 HP.',                  price: 140, currency: 'gda' },
+    { id: 'ultra_stim',  name: 'ULTRA STIM',     desc: 'Fully restore HP.',                price: 280, currency: 'gda' },
+    { id: 'elixir',      name: 'ELIXIR',         desc: 'Fully restore HP and EP.',         price: 450, currency: 'gda' },
+
+    // ----- EP / RESOURCE -----
+    { id: 'focus_tab',   name: 'FOCUS TAB',      desc: 'Restore 20 EP.',                   price: 60,  currency: 'gda' },
+    { id: 'battery',     name: 'BATTERY CELL',   desc: 'Restore 40 EP.',                   price: 120, currency: 'gda' },
+    { id: 'mind_link',   name: 'MIND LINK',      desc: 'Fully restore EP.',                price: 220, currency: 'gda' },
+
+    // ----- COMBAT BOOSTS -----
+    { id: 'berserker',   name: 'BERSERKER BREW', desc: '+ATK for 3 turns.',                price: 140, currency: 'gda' },
+    { id: 'iron_skin',   name: 'IRON SKIN',      desc: '+DEF for 3 turns.',                price: 140, currency: 'gda' },
+    { id: 'damage_chg',  name: 'DAMAGE CHARGE',  desc: 'Next move deals 2x damage.',       price: 180, currency: 'gda' },
+    { id: 'smoke_bomb',  name: 'SMOKE BOMB',     desc: 'Next enemy hit will miss.',        price: 120, currency: 'gda' },
+
+    // ----- DIRECT DAMAGE / UTILITY -----
+    { id: 'emp_nade',    name: 'EMP GRENADE',    desc: 'Deal 80 fixed damage to the enemy.', price: 160, currency: 'gda' },
+    { id: 'thermite',    name: 'THERMITE CHARGE',desc: 'Deal 120 fixed damage to the enemy.', price: 260, currency: 'gda' },
+
+    // ----- DEFENSE / CONTROL -----
+    { id: 'antidote',    name: 'ANTIDOTE',       desc: 'Clear all debuffs from active.',   price: 90,  currency: 'gda' },
+    { id: 'second_wind', name: 'SECOND WIND',    desc: 'Clear all effects, restore 30 HP.',price: 130, currency: 'gda' },
+    { id: 'revive',      name: 'REVIVE',         desc: 'Survive the next lethal hit.',     price: 200, currency: 'gda' },
+    { id: 'phoenix',     name: 'PHOENIX DOWN',   desc: 'Auto-revive at 75% HP.',           price: 500, currency: 'gda' },
+
+    // ----- PREMIUM (VM) -----
+    { id: 'gda_kit',     name: 'GDA FIELD KIT',  desc: 'Full party restore (HP+EP).',      price: 4,   currency: 'vm' },
+    { id: 'time_shard',  name: 'TIME SHARD',     desc: 'Take an extra turn this round.',   price: 6,   currency: 'vm' }
   ],
+
   suits: [
-    { id: 'classic', name: 'CLASSIC BLUE', desc: 'OG suit. No stat change.',     price: 0,   currency: 'gda', owned: true },
-    { id: 'black',   name: 'BLACK/GREY',   desc: 'Stealth tinted variant.',      price: 150, currency: 'gda' },
-    { id: 'beaten',  name: 'BEAT-UP SUIT', desc: 'Survivor of the Conquest fight.', price: 500, currency: 'gda' }
+    { id: 'classic',   name: 'CLASSIC BLUE',     desc: 'OG suit. No stat change.',                price: 0,    currency: 'gda', owned: true },
+    { id: 'black',     name: 'BLACK / GREY',     desc: 'Stealth-tinted variant.',                 price: 150,  currency: 'gda' },
+    { id: 'beaten',    name: 'BEAT-UP SUIT',     desc: 'Survivor of the Conquest fight.',         price: 500,  currency: 'gda' },
+    { id: 'training',  name: 'TRAINING GI',      desc: 'Loose grey gi. Casual day at the lab.',   price: 60,   currency: 'gda' },
+    { id: 'gda_agent', name: 'GDA AGENT',        desc: 'Cecil-coded charcoal field uniform.',     price: 220,  currency: 'gda' },
+    { id: 'omniman',   name: 'OMNI-MAN HOMAGE',  desc: 'White with the red collar. Tribute fit.', price: 400,  currency: 'gda' },
+    { id: 'viltrumite',name: 'VILTRUMITE WHITE', desc: 'Full empire whites. Looks like home.',    price: 650,  currency: 'gda' },
+    { id: 'streetwear',name: 'COLLEGE STREETWEAR',desc: 'Hoodie + jeans. Civilian Mark.',         price: 40,   currency: 'gda' },
+    { id: 'tux',       name: 'PROM TUX',         desc: 'For dates and existential dread.',        price: 100,  currency: 'gda' },
+    { id: 'multi_v1',  name: 'MULTIVERSE PURPLE',desc: 'From a darker timeline.',                 price: 350,  currency: 'gda' },
+    { id: 'multi_v2',  name: 'MULTIVERSE GOLD',  desc: 'From a brighter one.',                    price: 350,  currency: 'gda' },
+    { id: 'thragg',    name: 'THRAGG LORD',      desc: 'Crimson Viltrumite armor.',               price: 800,  currency: 'gda' },
+    { id: 'streamer',  name: 'STREAMER LOGO',    desc: 'Sponsored-content variant.',              price: 120,  currency: 'gda' },
+    { id: 'training2', name: 'BLOOD-SOAKED',     desc: 'Used. Stained. Loved.',                   price: 700,  currency: 'gda' },
+    { id: 'glow',      name: 'NEON GLOW',        desc: 'Hot cyan trim. Cyber GUI canon.',         price: 3,    currency: 'vm' },
+    { id: 'founder',   name: 'FOUNDER\'S EDITION', desc: 'Day-one supporter exclusive.',          price: 8,    currency: 'vm' },
+    { id: 'invisible', name: 'INVISIBLE',        desc: 'No suit visible. The sprite is just Mark.', price: 10, currency: 'vm' },
+    { id: 'omnibunny', name: 'OMNI-BUNNY PJ',    desc: 'Onesie with bunny ears. Cursed.',         price: 12,   currency: 'vm' }
   ],
+
   tutors: [
-    { id: 'tutor_rage', name: 'TEACH: RAGE', desc: 'Teach Mark RAGE.', price: 5, currency: 'vm' },
-    { id: 'tutor_burst',name: 'TEACH: BURST',desc: 'Teach Eve BURST.', price: 5, currency: 'vm' }
+    // ----- MARK -----
+    { id: 'tutor_thrust',       name: 'TEACH: THRUST',        desc: 'Quick low-EP physical for Mark.',   price: 2,  currency: 'vm' },
+    { id: 'tutor_double',       name: 'TEACH: DOUBLE STRIKE', desc: 'Two hits in one turn for Mark.',    price: 4,  currency: 'vm' },
+    { id: 'tutor_rage',         name: 'TEACH: RAGE',          desc: 'High-power physical for Mark.',     price: 5,  currency: 'vm' },
+    { id: 'tutor_sky',          name: 'TEACH: SKYBREAK',      desc: 'Orbital-drop finisher for Mark.',   price: 7,  currency: 'vm' },
+    { id: 'tutor_viltrum',      name: 'TEACH: VILTRUM STRIKE',desc: 'Cosmic-tagged big hit for Mark.',   price: 8,  currency: 'vm' },
+    { id: 'tutor_blood',        name: 'TEACH: BLOOD FIST',    desc: 'Brutal finisher for Mark.',         price: 12, currency: 'vm' },
+    { id: 'tutor_nova',         name: 'TEACH: NOVA BEAM',     desc: 'Cosmic ranged option for Mark.',    price: 6,  currency: 'vm' },
+    { id: 'tutor_emp',          name: 'TEACH: EMP GRID',      desc: 'Tech-tagged area lock for Mark.',   price: 5,  currency: 'vm' },
+
+    // ----- EVE -----
+    { id: 'tutor_burst',        name: 'TEACH: BURST',         desc: 'Wide pink detonation for Eve.',     price: 5,  currency: 'vm' },
+    { id: 'tutor_pshield',      name: 'TEACH: PINK SHIELD',   desc: 'Full one-hit damage block.',        price: 4,  currency: 'vm' },
+    { id: 'tutor_novaburst',    name: 'TEACH: NOVA BURST',    desc: 'Bigger pink detonation for Eve.',   price: 6,  currency: 'vm' },
+    { id: 'tutor_rain',         name: 'TEACH: PINK RAIN',     desc: 'Cosmic shard-fall for Eve.',        price: 5,  currency: 'vm' },
+    { id: 'tutor_atomic',       name: 'TEACH: ATOMIC EDGE',   desc: 'Cosmic high-power for Eve.',        price: 8,  currency: 'vm' },
+    { id: 'tutor_heal',         name: 'TEACH: HEALING PULSE', desc: '60% HP restore move for Eve.',      price: 7,  currency: 'vm' },
+    { id: 'tutor_melt',         name: 'TEACH: MELTDOWN',      desc: 'BIO finisher for Eve.',             price: 12, currency: 'vm' }
+  ],
+
+  buffs: [
+    // ----- MARK -----
+    { id: 'm_hp_1',  name: 'MARK · HP +20',  desc: 'Permanent +20 max HP.',     price: 120, currency: 'gda', char: 'mark', stat: 'hp',  amt: 20 },
+    { id: 'm_hp_2',  name: 'MARK · HP +40',  desc: 'Permanent +40 max HP.',     price: 300, currency: 'gda', char: 'mark', stat: 'hp',  amt: 40 },
+    { id: 'm_ep_1',  name: 'MARK · EP +10',  desc: 'Permanent +10 max EP.',     price: 140, currency: 'gda', char: 'mark', stat: 'ep',  amt: 10 },
+    { id: 'm_atk_1', name: 'MARK · ATK +3',  desc: 'Permanent +3 ATK.',         price: 200, currency: 'gda', char: 'mark', stat: 'atk', amt: 3  },
+    { id: 'm_def_1', name: 'MARK · DEF +3',  desc: 'Permanent +3 DEF.',         price: 200, currency: 'gda', char: 'mark', stat: 'def', amt: 3  },
+
+    // ----- EVE -----
+    { id: 'e_hp_1',  name: 'EVE · HP +20',   desc: 'Permanent +20 max HP.',     price: 120, currency: 'gda', char: 'eve',  stat: 'hp',  amt: 20 },
+    { id: 'e_hp_2',  name: 'EVE · HP +40',   desc: 'Permanent +40 max HP.',     price: 300, currency: 'gda', char: 'eve',  stat: 'hp',  amt: 40 },
+    { id: 'e_ep_1',  name: 'EVE · EP +20',   desc: 'Permanent +20 max EP.',     price: 180, currency: 'gda', char: 'eve',  stat: 'ep',  amt: 20 },
+    { id: 'e_atk_1', name: 'EVE · ATK +3',   desc: 'Permanent +3 ATK.',         price: 200, currency: 'gda', char: 'eve',  stat: 'atk', amt: 3  },
+    { id: 'e_def_1', name: 'EVE · DEF +3',   desc: 'Permanent +3 DEF.',         price: 200, currency: 'gda', char: 'eve',  stat: 'def', amt: 3  },
+
+    // ----- GLOBAL -----
+    { id: 'g_crit',  name: 'GLOBAL · CRIT +5%',  desc: '+5% crit rate for the whole party.',  price: 6,  currency: 'vm', global: 'critRate', amt: 0.05 },
+    { id: 'g_crit2', name: 'GLOBAL · CRIT +10%', desc: 'Another +10% crit rate.',             price: 12, currency: 'vm', global: 'critRate', amt: 0.10 },
+    { id: 'g_xp_1',  name: 'GLOBAL · XP +25%',   desc: 'All XP gains +25%.',                  price: 8,  currency: 'vm', global: 'xpMult',   amt: 0.25 },
+    { id: 'g_xp_2',  name: 'GLOBAL · XP +50%',   desc: 'Stack another +50% XP.',              price: 16, currency: 'vm', global: 'xpMult',   amt: 0.50 },
+    { id: 'g_gda',   name: 'GLOBAL · GDA +25%',  desc: 'All GDA payouts +25%.',               price: 5,  currency: 'vm', global: 'gdaMult',  amt: 0.25 }
   ]
 };
