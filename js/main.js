@@ -381,7 +381,10 @@ window.addEventListener('DOMContentLoaded', () => {
   // Boot -> menu
   const boot = document.getElementById('screen-boot');
   boot.classList.add('active');
+  let booted = false;
   const advance = () => {
+    if (booted) return;
+    booted = true;
     document.removeEventListener('keydown', advance);
     boot.removeEventListener('click', advance);
     Router.go('menu');

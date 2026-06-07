@@ -244,7 +244,7 @@ const SHOP_DATA = {
     { id: 'thermite',    name: 'THERMITE CHARGE',desc: 'Deal 120 fixed damage to the enemy.', price: 260, currency: 'gda' },
 
     // ----- DEFENSE / CONTROL -----
-    { id: 'antidote',    name: 'ANTIDOTE',       desc: 'Clear all debuffs from active.',   price: 90,  currency: 'gda' },
+    { id: 'antidote',    name: 'ANTIDOTE',       desc: 'Restore 40 HP.',                   price: 90,  currency: 'gda' },
     { id: 'second_wind', name: 'SECOND WIND',    desc: 'Clear all effects, restore 30 HP.',price: 130, currency: 'gda' },
     { id: 'revive',      name: 'REVIVE',         desc: 'Survive the next lethal hit.',     price: 200, currency: 'gda' },
     { id: 'phoenix',     name: 'PHOENIX DOWN',   desc: 'Auto-revive at 75% HP.',           price: 500, currency: 'gda' },

@@ -7,6 +7,8 @@ const Battle = (() => {
   let dialogueQueue = [];
   let inputLocked = false;
 
+  const isOmniBunny = () => state && state.enemy && state.enemy.char.name === 'OMNI-BUNNY';
+
   function start(party, enemyDef, onEnd) {
     // party is an array of char save objects: [active, bench]
     state = {
@@ -303,7 +305,7 @@ const Battle = (() => {
     for (let h = 0; h < hitCount; h++) {
       const calc = calcDamage(buffed.atk, state.enemy.def, state.enemy.char.tag, m, true);
       let dmg = Math.floor(calc.dmg * damageMul);
-      if (state.enemy.char.name === 'OMNI-BUNNY') dmg = Math.floor(dmg * 0.4);
+      if (isOmniBunny()) dmg = Math.floor(dmg * 0.4);
       state.enemy.hp = Math.max(0, state.enemy.hp - dmg);
       totalDmg += dmg;
       if (calc.crit) anyCrit = true;
@@ -430,9 +432,10 @@ const Battle = (() => {
         queueDialogue('THERMITE CHARGE. 120 fixed damage.'); break;
       }
       case 'antidote': {
-        state.debuffs.enemyAtk = state.debuffs.enemyAtk;  // no debuffs on player yet
-        state.buffs.atk = Math.max(0, state.buffs.atk);
-        queueDialogue('ANTIDOTE. Debuffs cleared.'); break;
+        const back = Math.min(40, a.maxHP - a.hp);
+        a.hp += back;
+        queueDialogue(`ANTIDOTE. Recovered ${back} HP.`);
+        break;
       }
       case 'second_wind': {
         state.buffs.atk = 0; state.buffs.def = 0; state.debuffs.enemyAtk = 0;
@@ -546,7 +549,7 @@ const Battle = (() => {
     const playerBuff = applyBuffs(a);
     const calc = calcDamage(enemyAtk, playerBuff.def, a.char.tag, m);
     let dmg = calc.dmg;
-    if (state.enemy.char.name === 'OMNI-BUNNY') dmg = Math.floor(dmg * 1.4);
+    if (isOmniBunny()) dmg = Math.floor(dmg * 1.4);
 
     // Dodge (smoke bomb) — skips the hit entirely
     let dodged = false;
