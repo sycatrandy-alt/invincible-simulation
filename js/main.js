@@ -1,29 +1,30 @@
 // INVINCIBLE: SIMULATION — main shell, menus, save state
 
 const Game = (() => {
-  const SAVE_KEY = 'invincible_sim_save_v8';
+  const SAVE_KEY = 'pancake_bunny_rpg_save_v1';
 
   const defaultState = () => ({
-    gda: 100,
-    vm: 5,
-    bag: { stim: 2 },
-    suits: { classic: true },
-    boughtBuffs: {},
+    butter: 100,
+    syrup: 5,
+    bag: { crumb: 2 },
+    boughtUpgrades: {},
+    boughtBlueprints: {},
+    perks: {},                    // { starter_crumb: true, three_fighter: true, ... }
     chars: {
-      mark:  { id: 'mark',  level: 1, xp: 0, moves: ['punch', 'flyKick'] },
-      eve:   { id: 'eve',   level: 1, xp: 0, moves: ['pinkBlast', 'shieldWall'] },
-      allen: { id: 'allen', level: 1, xp: 0, moves: ['cosmicSlap', 'starHook'] }
+      pancake: { id: 'pancake', level: 1, xp: 0, moves: ['zap', 'shock'] },
+      waffle:  { id: 'waffle',  level: 1, xp: 0, moves: ['toss', 'fuse'] },
+      butta:   { id: 'butta',   level: 1, xp: 0, moves: ['bonk', 'lickWound'] }
     },
-    roster: ['mark', 'eve'],      // playable party members the player has recruited
+    roster: ['pancake', 'waffle', 'butta'],
     permaBuffs: {
-      mark:   { hp: 0, ep: 0, atk: 0, def: 0 },
-      eve:    { hp: 0, ep: 0, atk: 0, def: 0 },
-      allen:  { hp: 0, ep: 0, atk: 0, def: 0 },
-      global: { critRate: 0, xpMult: 1, gdaMult: 1 }
+      pancake: { hp: 0, ep: 0, atk: 0, def: 0 },
+      waffle:  { hp: 0, ep: 0, atk: 0, def: 0 },
+      butta:   { hp: 0, ep: 0, atk: 0, def: 0 },
+      global:  { critRate: 0, xpMult: 1, butterMult: 1, critDmg: 0, benchRegen: 0 }
     },
     scenesDone: {},
     currentScene: null,
-    currentRegion: 'earth',       // play screen tab
+    currentRegion: 'kitchen',
     settings: { speed: 2, text: 30, blood: 'comic', shake: true, vol: 70 }
   });
 
@@ -57,9 +58,9 @@ const Game = (() => {
 
   function updateHud() {
     const el = document.getElementById('credits-display');
-    if (el) el.textContent = `GDA: ${state.gda}  |  VM: ${state.vm}`;
+    if (el) el.textContent = `BUTTER: ${state.butter}  |  SYRUP: ${state.syrup}`;
     const sc = document.getElementById('shop-credits');
-    if (sc) sc.textContent = `GDA: ${state.gda} · VM: ${state.vm}`;
+    if (sc) sc.textContent = `BUTTER: ${state.butter} · SYRUP: ${state.syrup}`;
   }
 
   function xpForNext(lvl) { return 60 + lvl * 55; }
@@ -129,27 +130,17 @@ function renderScenes() {
   const list = document.getElementById('scene-list');
   list.innerHTML = '';
 
-  // Region tab bar
-  const conquestDone = !!Game.state.scenesDone['s5'];
-  const marsUnlocked = conquestDone;
+  // Region tab bar — single region for now
   const tabs = document.createElement('div');
   tabs.className = 'region-tabs';
   tabs.innerHTML = `
-    <button class="region-tab ${Game.state.currentRegion === 'earth' ? 'active' : ''}" data-region="earth">🌎 EARTH</button>
-    <button class="region-tab ${Game.state.currentRegion === 'mars' ? 'active' : ''} ${marsUnlocked ? '' : 'locked'}" data-region="mars">🟥 MARS ${marsUnlocked ? '' : '· LOCKED'}</button>
+    <button class="region-tab active" data-region="kitchen">🍳 KITCHEN</button>
   `;
-  tabs.querySelectorAll('.region-tab').forEach(t => {
-    t.addEventListener('click', () => {
-      if (t.classList.contains('locked')) {
-        flashDialogue('Defeat CONQUEST to unlock MARS.');
-        return;
-      }
-      Game.state.currentRegion = t.dataset.region;
-      Game.save();
-      renderScenes();
-    });
-  });
   list.appendChild(tabs);
+  if (Game.state.currentRegion !== 'kitchen') {
+    Game.state.currentRegion = 'kitchen';
+    Game.save();
+  }
 
   // Scene grid for current region
   const grid = document.createElement('div');
@@ -295,31 +286,20 @@ function finishLearn() {
 }
 
 function showVictory(result, sc) {
-  // Recruitment hook
-  let recruitedLine = '';
-  if (result.win && sc.recruitsOnWin) {
-    const newMember = sc.recruitsOnWin;
-    if (!Game.state.roster.includes(newMember)) {
-      Game.state.roster.push(newMember);
-      Game.save();
-      recruitedLine = `<br><span style="color:var(--green)">✦ ${CHARACTERS[newMember].name.toUpperCase()} JOINED YOUR PARTY ✦</span>`;
-    }
-  }
-
   Router.go('victory');
   const title = document.getElementById('victory-title');
   const text = document.getElementById('victory-text');
-  const gainLine = result.gda > 0 ? `<br><span style="color:var(--yellow)">+${result.gda} GDA</span>` : '';
+  const gainLine = result.butter > 0 ? `<br><span style="color:var(--yellow)">+${result.butter} BUTTER</span>` : '';
   const levels = Game.state.roster.map(id => `${CHARACTERS[id].name} Lv ${Game.state.chars[id].level}`).join(' · ');
   if (result.win) {
     title.textContent = 'VICTORY';
-    text.innerHTML = `${sc.title} cleared.${recruitedLine}<br>${levels}${gainLine}<br>TOTAL GDA: ${Game.state.gda}`;
+    text.innerHTML = `${sc.title} cleared.<br>${levels}${gainLine}<br>TOTAL BUTTER: ${Game.state.butter}`;
   } else if (result.scripted) {
     title.textContent = 'STORY END';
-    text.innerHTML = `${sc.title} survived.<br>Now the real fight begins.${gainLine}<br>TOTAL GDA: ${Game.state.gda}`;
+    text.innerHTML = `${sc.title} survived.${gainLine}<br>TOTAL BUTTER: ${Game.state.butter}`;
   } else {
     title.textContent = result.fled ? 'RETREATED' : 'DEFEATED';
-    text.innerHTML = `Regroup and try again.${gainLine}<br>TOTAL GDA: ${Game.state.gda}`;
+    text.innerHTML = `Regroup and try again.${gainLine}<br>TOTAL BUTTER: ${Game.state.butter}`;
   }
   Game.updateHud();
   document.getElementById('victory-continue').onclick = () => Router.go('play');
@@ -337,8 +317,8 @@ function renderShop(tab) {
     const card = document.createElement('div');
     card.className = 'shop-item';
     let owned = false;
-    if (tab === 'suits') owned = !!(Game.state.suits[item.id] || item.owned);
-    else if (tab === 'buffs') owned = !!Game.state.boughtBuffs[item.id];
+    if (tab === 'upgrades') owned = !!Game.state.boughtUpgrades[item.id];
+    else if (tab === 'blueprints') owned = !!Game.state.boughtBlueprints[item.id];
     else if (tab === 'tutors') {
       const t = TUTOR_MAP[item.id];
       if (t) owned = Game.state.chars[t.charId].moves.includes(t.moveId);
@@ -366,25 +346,22 @@ function renderShop(tab) {
 
 // Map every tutor id to its target character + move
 const TUTOR_MAP = {
-  tutor_rage:      { charId: 'mark', moveId: 'rage' },
-  tutor_thrust:    { charId: 'mark', moveId: 'thrust' },
-  tutor_double:    { charId: 'mark', moveId: 'doubleStrike' },
-  tutor_sky:       { charId: 'mark', moveId: 'skybreak' },
-  tutor_viltrum:   { charId: 'mark', moveId: 'viltrumStrike' },
-  tutor_blood:     { charId: 'mark', moveId: 'bloodFist' },
-  tutor_nova:      { charId: 'mark', moveId: 'novaBeam' },
-  tutor_emp:       { charId: 'mark', moveId: 'empGrid' },
-  tutor_burst:     { charId: 'eve',  moveId: 'burst' },
-  tutor_pshield:   { charId: 'eve',  moveId: 'pinkShield' },
-  tutor_novaburst: { charId: 'eve',  moveId: 'novaBurst' },
-  tutor_rain:      { charId: 'eve',  moveId: 'pinkRain' },
-  tutor_atomic:    { charId: 'eve',  moveId: 'atomicEdge' },
-  tutor_heal:      { charId: 'eve',  moveId: 'healingPulse' },
-  tutor_melt:      { charId: 'eve',  moveId: 'meltdown' }
+  // PANCAKE BUNNY
+  tutor_overcharge:  { charId: 'pancake', moveId: 'overcharge' },
+  tutor_thunderdome: { charId: 'pancake', moveId: 'thunderdome' },
+  tutor_pancakeFlip: { charId: 'pancake', moveId: 'pancakeFlip' },
+  // WAFFLE RABBIT
+  tutor_detonation:  { charId: 'waffle',  moveId: 'detonation' },
+  tutor_waffleStorm: { charId: 'waffle',  moveId: 'waffleStorm' },
+  tutor_syrupSlick:  { charId: 'waffle',  moveId: 'syrupSlick' },
+  // BUTTA DAWG
+  tutor_butterBath:  { charId: 'butta',   moveId: 'butterBath' },
+  tutor_bigBark:     { charId: 'butta',   moveId: 'bigBark' },
+  tutor_goodBoyAura: { charId: 'butta',   moveId: 'goodBoyAura' }
 };
 
 function buy(tab, item) {
-  const wallet = item.currency === 'vm' ? 'vm' : 'gda';
+  const wallet = item.currency === 'syrup' ? 'syrup' : 'butter';
 
   // Pre-validate tutors so we don't deduct currency for a no-op
   if (tab === 'tutors') {
@@ -394,11 +371,11 @@ function buy(tab, item) {
       return;
     }
   }
-  if (tab === 'buffs' && Game.state.boughtBuffs[item.id]) {
+  if (tab === 'upgrades' && Game.state.boughtUpgrades[item.id]) {
     flashDialogue('Already owned.');
     return;
   }
-  if (tab === 'suits' && Game.state.suits[item.id]) {
+  if (tab === 'blueprints' && Game.state.boughtBlueprints[item.id]) {
     flashDialogue('Already owned.');
     return;
   }
@@ -412,8 +389,6 @@ function buy(tab, item) {
   let queuedLearn = false;
   if (tab === 'items') {
     Game.state.bag[item.id] = (Game.state.bag[item.id] || 0) + 1;
-  } else if (tab === 'suits') {
-    Game.state.suits[item.id] = true;
   } else if (tab === 'tutors') {
     const t = TUTOR_MAP[item.id];
     if (t) {
@@ -421,12 +396,20 @@ function buy(tab, item) {
       if (c.moves.length < 4) c.moves.push(t.moveId);
       else { Game.queueLearn(t.charId, t.moveId); queuedLearn = true; }
     }
-  } else if (tab === 'buffs') {
-    Game.state.boughtBuffs[item.id] = true;
+  } else if (tab === 'upgrades') {
+    Game.state.boughtUpgrades[item.id] = true;
     if (item.char) {
       Game.state.permaBuffs[item.char][item.stat] += item.amt;
     } else if (item.global) {
       Game.state.permaBuffs.global[item.global] += item.amt;
+    }
+  } else if (tab === 'blueprints') {
+    Game.state.boughtBlueprints[item.id] = true;
+    if (item.global) {
+      Game.state.permaBuffs.global[item.global] = (Game.state.permaBuffs.global[item.global] || 0) + item.amt;
+    }
+    if (item.perk) {
+      Game.state.perks[item.perk] = true;
     }
   }
   Game.save();

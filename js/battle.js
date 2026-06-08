@@ -7,7 +7,8 @@ const Battle = (() => {
   let dialogueQueue = [];
   let inputLocked = false;
 
-  const isOmniBunny = () => state && state.enemy && state.enemy.char.name === 'OMNI-BUNNY';
+  // No scripted-difficulty-multiplier enemies in this build (kept hook for future)
+  const isScriptedHardCap = () => false;
 
   function start(party, enemyDef, onEnd) {
     // party is an array of char save objects: [active, bench]
@@ -17,7 +18,7 @@ const Battle = (() => {
       enemy: buildEnemyCombatant(enemyDef),
       turnCount: 1,
       onEnd,
-      buffs: { atk: 0, def: 0, shield: false, revive: false },
+      buffs: { atk: 0, def: 0, revive: false, phoenix: false, damageCharge: false, dodge: false },
       debuffs: { enemyAtk: 0 },
       phaseIdx: 0,
       firedDialogue: new Set(),
@@ -27,6 +28,10 @@ const Battle = (() => {
     // Clear any stale phase banner from a previous fight
     const pb = document.getElementById('phase-banner');
     if (pb) { pb.classList.remove('show'); pb.textContent = ''; }
+    // Apply STARTER KIT perk — one free CRUMB into the bag each battle
+    if (Game.state.perks && Game.state.perks.starter_crumb) {
+      Game.state.bag.crumb = (Game.state.bag.crumb || 0) + 1;
+    }
     renderAll();
     dialogueQueue = [];
     inputLocked = false;
@@ -46,8 +51,8 @@ const Battle = (() => {
     let bgm = battleBgm;
     let trackLabel = 'BATTLE THEME';
     if (enemyDef) {
-      if (enemyDef.name === 'THRAGG') { bgm = thraggBgm; trackLabel = 'THRAGG · DARK LORD'; }
-      else if (enemyDef.name === 'CONQUEST') { bgm = conquestBgm; trackLabel = 'CONQUEST · BIG BOSS'; }
+      if (enemyDef.name === 'MAMA BUNNY') { bgm = thraggBgm; trackLabel = 'MAMA · FINAL'; }
+      else if (enemyDef.name === 'STOVE LORD' || enemyDef.name === 'CEREAL KILLER') { bgm = conquestBgm; trackLabel = 'BOSS THEME'; }
     }
 
     console.log('[BGM] Enemy:', enemyDef && enemyDef.name, '→ Playing:', trackLabel);
@@ -284,7 +289,8 @@ const Battle = (() => {
     const tagMult = (TYPE_CHART[move.type] && TYPE_CHART[move.type][defenderTag]) || 1;
     const variance = 0.85 + Math.random() * 0.3;
     const critBonus = attackerIsPlayer ? (Game.state.permaBuffs?.global?.critRate || 0) : 0;
-    const crit = Math.random() < (0.04 + critBonus) ? 1.5 : 1;
+    const critDmgBonus = attackerIsPlayer ? (Game.state.permaBuffs?.global?.critDmg || 0) : 0;
+    const crit = Math.random() < (0.04 + critBonus) ? (1.5 + critDmgBonus) : 1;
     let dmg = Math.floor(base * ratio * tagMult * variance * crit);
     return { dmg, tagMult, crit: crit > 1 };
   }
@@ -298,32 +304,38 @@ const Battle = (() => {
     dialogueQueue = [];
     queueDialogue(`${a.char.name} used ${m.name}!`);
 
-    // Defensive moves
-    if (mid === 'shieldWall') {
-      state.buffs.shield = true;
-      playFX('energy', 'player');
-      queueDialogue(`${a.char.name} raised a SHIELD WALL!`);
-      queueDialogue('Next incoming hit will be halved.');
-      renderAll();
-      playQueue(() => { afterPlayerTurn(); enemyTurn(); });
-      return;
-    }
-    if (mid === 'pinkShield') {
-      state.buffs.fullBlock = true;
-      playFX('cosmic', 'player');
-      queueDialogue(`${a.char.name} formed a PINK SHIELD!`);
-      queueDialogue('Next incoming hit will be fully blocked.');
-      renderAll();
-      playQueue(() => { afterPlayerTurn(); enemyTurn(); });
-      return;
-    }
-    // Healing move
-    if (mid === 'healingPulse') {
-      const back = Math.floor(a.maxHP * 0.6);
+    // Healing moves (no damage; restore HP)
+    if (mid === 'lickWound') {
+      const back = Math.floor(a.maxHP * 0.35);
       a.hp = Math.min(a.maxHP, a.hp + back);
-      playFX('bio', 'player');
-      queueDialogue(`${a.char.name} pulses with healing light.`);
+      playFX('heal', 'player');
+      queueDialogue(`${a.char.name} licks the wound clean.`);
       queueDialogue(`Recovered ${back} HP.`);
+      renderAll();
+      playQueue(() => { afterPlayerTurn(); enemyTurn(); });
+      return;
+    }
+    if (mid === 'butterBath') {
+      let report = [];
+      state.party.forEach(p => {
+        const back = Math.floor(p.maxHP * 0.5);
+        const before = p.hp;
+        p.hp = Math.min(p.maxHP, p.hp + back);
+        report.push(`${p.char.name} +${p.hp - before} HP`);
+      });
+      playFX('heal', 'player');
+      queueDialogue(`${a.char.name} coats the party in BUTTER.`);
+      queueDialogue(report.join(' · '));
+      renderAll();
+      playQueue(() => { afterPlayerTurn(); enemyTurn(); });
+      return;
+    }
+    // Party-wide DEF buff
+    if (mid === 'goodBoyAura') {
+      state.buffs.def += 3;
+      playFX('food', 'player');
+      queueDialogue(`${a.char.name} radiates GOOD BOY AURA.`);
+      queueDialogue('Party DEF rose for 3 turns!');
       renderAll();
       playQueue(() => { afterPlayerTurn(); enemyTurn(); });
       return;
@@ -333,13 +345,13 @@ const Battle = (() => {
     let damageMul = 1;
     if (state.buffs.damageCharge) { damageMul = 2; state.buffs.damageCharge = false; }
 
-    const hitCount = (mid === 'doubleStrike') ? 2 : 1;
+    const hitCount = 1;
     let totalDmg = 0;
     let anyCrit = false, anyMult = 1;
     for (let h = 0; h < hitCount; h++) {
       const calc = calcDamage(buffed.atk, state.enemy.def, state.enemy.char.tag, m, true);
       let dmg = Math.floor(calc.dmg * damageMul);
-      if (isOmniBunny()) dmg = Math.floor(dmg * 0.4);
+      if (isScriptedHardCap()) dmg = Math.floor(dmg * 0.4);
       state.enemy.hp = Math.max(0, state.enemy.hp - dmg);
       totalDmg += dmg;
       if (calc.crit) anyCrit = true;
@@ -406,91 +418,75 @@ const Battle = (() => {
     let skipEnemy = false;
 
     switch (id) {
-      case 'stim': {
-        const back = Math.min(50, a.maxHP - a.hp); a.hp += back;
-        queueDialogue(`Used GDA STIM. Recovered ${back} HP.`); break;
+      case 'crumb': {
+        const back = Math.min(40, a.maxHP - a.hp); a.hp += back;
+        queueDialogue(`CRUMB. Recovered ${back} HP.`); break;
       }
-      case 'patch': {
-        const back = Math.min(30, a.maxHP - a.hp); a.hp += back;
-        a.ep = Math.min(a.maxEP, a.ep + 10);
-        queueDialogue(`Used AURA PATCH. +${back} HP, +10 EP.`); break;
+      case 'pat': {
+        const back = Math.min(75, a.maxHP - a.hp); a.hp += back;
+        queueDialogue(`PAT OF BUTTER. +${back} HP.`); break;
       }
-      case 'mega_stim': {
-        const back = Math.min(100, a.maxHP - a.hp); a.hp += back;
-        queueDialogue(`Used MEGA STIM. Recovered ${back} HP.`); break;
+      case 'stack': {
+        const back = Math.min(150, a.maxHP - a.hp); a.hp += back;
+        queueDialogue(`PANCAKE STACK. +${back} HP.`); break;
       }
-      case 'ultra_stim': {
+      case 'feast': {
         const back = a.maxHP - a.hp; a.hp = a.maxHP;
-        queueDialogue(`ULTRA STIM. Fully restored. +${back} HP.`); break;
+        queueDialogue(`BREAKFAST FEAST. Fully restored. +${back} HP.`); break;
       }
-      case 'elixir': {
-        a.hp = a.maxHP; a.ep = a.maxEP;
-        queueDialogue('ELIXIR — full restore.'); break;
+      case 'spark': {
+        const back = Math.min(25, a.maxEP - a.ep); a.ep += back;
+        queueDialogue(`SPARK. +${back} EP.`); break;
       }
-      case 'focus_tab': {
-        const back = Math.min(20, a.maxEP - a.ep); a.ep += back;
-        queueDialogue(`FOCUS TAB. +${back} EP.`); break;
+      case 'jolt': {
+        const back = Math.min(50, a.maxEP - a.ep); a.ep += back;
+        queueDialogue(`JOLT. +${back} EP.`); break;
       }
-      case 'battery': {
-        const back = Math.min(40, a.maxEP - a.ep); a.ep += back;
-        queueDialogue(`BATTERY CELL. +${back} EP.`); break;
-      }
-      case 'mind_link': {
+      case 'capacitor': {
         const back = a.maxEP - a.ep; a.ep = a.maxEP;
-        queueDialogue(`MIND LINK. EP fully restored. +${back} EP.`); break;
+        queueDialogue(`CAPACITOR. EP fully restored. +${back} EP.`); break;
       }
-      case 'berserker': {
+      case 'energy_drink': {
         state.buffs.atk += 3;
-        queueDialogue('BERSERKER BREW. ATK rose for 3 turns.'); break;
+        queueDialogue('ENERGY DRINK. ATK rose for 3 turns.'); break;
       }
-      case 'iron_skin': {
+      case 'bacon_grease': {
         state.buffs.def += 3;
-        queueDialogue('IRON SKIN. DEF rose for 3 turns.'); break;
+        queueDialogue('BACON GREASE. DEF rose for 3 turns.'); break;
       }
-      case 'damage_chg': {
+      case 'syrup_charge': {
         state.buffs.damageCharge = true;
-        queueDialogue('DAMAGE CHARGE armed. Next move 2x.'); break;
+        queueDialogue('SYRUP CHARGE armed. Next move 2x.'); break;
       }
-      case 'smoke_bomb': {
+      case 'cloak': {
         state.buffs.dodge = true;
-        queueDialogue('SMOKE BOMB. Next enemy hit will miss.'); break;
+        queueDialogue('NAPKIN CLOAK. Next enemy hit will miss.'); break;
       }
-      case 'emp_nade': {
-        state.enemy.hp = Math.max(0, state.enemy.hp - 80);
-        playFX('tech', 'player'); flashHit('enemy');
-        queueDialogue('EMP GRENADE detonates. 80 fixed damage.'); break;
+      case 'firecracker': {
+        state.enemy.hp = Math.max(0, state.enemy.hp - 70);
+        playFX('blast', 'player'); flashHit('enemy');
+        queueDialogue('FIRECRACKER detonates. 70 fixed damage.'); break;
       }
-      case 'thermite': {
-        state.enemy.hp = Math.max(0, state.enemy.hp - 120);
-        playFX('physical', 'player'); flashHit('enemy');
-        queueDialogue('THERMITE CHARGE. 120 fixed damage.'); break;
+      case 'm80': {
+        state.enemy.hp = Math.max(0, state.enemy.hp - 130);
+        playFX('blast', 'player'); flashHit('enemy');
+        queueDialogue('M-80. 130 fixed damage.'); break;
       }
-      case 'antidote': {
-        const back = Math.min(40, a.maxHP - a.hp);
-        a.hp += back;
-        queueDialogue(`ANTIDOTE. Recovered ${back} HP.`);
-        break;
-      }
-      case 'second_wind': {
-        state.buffs.atk = 0; state.buffs.def = 0; state.debuffs.enemyAtk = 0;
-        const back = Math.min(30, a.maxHP - a.hp); a.hp += back;
-        queueDialogue(`SECOND WIND. All effects cleared. +${back} HP.`); break;
-      }
-      case 'revive': {
+      case 'second_chance': {
         state.buffs.revive = true;
-        queueDialogue('REVIVE armed. Triggers on fatal blow.'); break;
+        queueDialogue('SECOND CHANCE armed. Triggers on fatal blow.'); break;
       }
-      case 'phoenix': {
+      case 'phoenix_yolk': {
         state.buffs.phoenix = true;
-        queueDialogue('PHOENIX DOWN ready. Auto-revive at 75% HP.'); break;
+        queueDialogue('PHOENIX YOLK ready. Auto-revive at 80% HP.'); break;
       }
-      case 'gda_kit': {
+      case 'field_kit': {
         state.party.forEach(p => { p.hp = p.maxHP; p.ep = p.maxEP; });
-        queueDialogue('GDA FIELD KIT. Party fully restored.'); break;
+        queueDialogue('FIELD BREAKFAST. Party fully restored.'); break;
       }
-      case 'time_shard': {
+      case 'time_chip': {
         skipEnemy = true;
-        queueDialogue('TIME SHARD. You get another turn!'); break;
+        queueDialogue('TIME CHIP. You get another turn!'); break;
       }
     }
 
@@ -566,7 +562,9 @@ const Battle = (() => {
     if (state.party.length > 1) {
       const b = bench();
       if (b.hp > 0) {
-        b.hp = Math.min(b.maxHP, b.hp + Math.floor(b.maxHP * 0.03));
+        const baseRegen = 0.03;
+        const bonus = Game.state.permaBuffs?.global?.benchRegen || 0;
+        b.hp = Math.min(b.maxHP, b.hp + Math.floor(b.maxHP * (baseRegen + bonus)));
         b.ep = Math.min(b.maxEP, b.ep + 1);
       }
     }
@@ -609,23 +607,14 @@ const Battle = (() => {
     const playerBuff = applyBuffs(a);
     const calc = calcDamage(enemyAtk, playerBuff.def, a.char.tag, m);
     let dmg = calc.dmg;
-    if (isOmniBunny()) dmg = Math.floor(dmg * 1.4);
+    if (isScriptedHardCap()) dmg = Math.floor(dmg * 1.4);
 
     // Dodge (smoke bomb) — skips the hit entirely
     let dodged = false;
     if (state.buffs.dodge && dmg > 0) { dmg = 0; state.buffs.dodge = false; dodged = true; }
 
-    // Full block (pink shield)
     let fullBlocked = false;
-    if (!dodged && state.buffs.fullBlock && dmg > 0) { dmg = 0; state.buffs.fullBlock = false; fullBlocked = true; }
-
-    // Shield wall — halve the hit
     let shieldUsed = false;
-    if (!dodged && !fullBlocked && state.buffs.shield && dmg > 0) {
-      dmg = Math.floor(dmg / 2);
-      state.buffs.shield = false;
-      shieldUsed = true;
-    }
 
     playFX(m.type, 'enemy');
     a.hp = Math.max(0, a.hp - dmg);
@@ -634,14 +623,11 @@ const Battle = (() => {
     dialogueQueue = [];
     queueDialogue(`${e.char.name} used ${m.name}!`);
     if (dodged) {
-      queueDialogue(`${a.char.name} vanished in smoke — missed!`);
-    } else if (fullBlocked) {
-      queueDialogue('PINK SHIELD fully blocked the hit!');
+      queueDialogue(`${a.char.name} ducked behind a napkin — missed!`);
     } else {
       if (calc.crit) queueDialogue('CRITICAL HIT!');
       if (calc.tagMult > 1.1) queueDialogue("It's super effective!");
       if (calc.tagMult < 0.9) queueDialogue("It's not very effective...");
-      if (shieldUsed) queueDialogue('SHIELD WALL absorbed half the hit!');
       if (m.power > 0) queueDialogue(`${a.char.name} took ${dmg} damage.`);
     }
 
@@ -650,8 +636,8 @@ const Battle = (() => {
       if (a.hp <= 0) {
         if (state.buffs.phoenix) {
           state.buffs.phoenix = false;
-          a.hp = Math.floor(a.maxHP * 0.75);
-          dialogueQueue = ['PHOENIX DOWN ignites!', `${a.char.name} rises at 75% HP.`];
+          a.hp = Math.floor(a.maxHP * 0.80);
+          dialogueQueue = ['PHOENIX YOLK cracks!', `${a.char.name} rises at 80% HP.`];
           renderAll();
           playQueue(() => showCmd('main'));
           return;
@@ -698,7 +684,16 @@ const Battle = (() => {
     const layer = document.getElementById('fx-layer');
     if (!layer) return;
     const fromEnemy = from === 'enemy';
-    const typeKey = type.toLowerCase();
+    // Map game move types → existing FX CSS classes
+    const FX_ALIAS = {
+      electric: 'energy',
+      blast:    'cosmic',
+      steel:    'tech',
+      heal:     'bio',
+      food:     'mental',
+      physical: 'physical'
+    };
+    const typeKey = FX_ALIAS[type.toLowerCase()] || type.toLowerCase();
     const fromSuffix = fromEnemy ? ' from-enemy' : '';
     const spawn = (cls, ttl) => {
       const el = document.createElement('div');
@@ -750,10 +745,10 @@ const Battle = (() => {
 
   function win() {
     const xp = state.enemy.char.xp;
-    const gdaMult = Game.state.permaBuffs?.global?.gdaMult || 1;
-    const gda = Math.floor(state.enemy.char.gda * gdaMult);
-    Game.state.gda += gda;
-    // XP to all party members who participated (active + bench if not fainted from start)
+    const butterMult = Game.state.permaBuffs?.global?.butterMult || 1;
+    const butter = Math.floor((state.enemy.char.butter || 0) * butterMult);
+    Game.state.butter += butter;
+    // XP to all party members who participated (active + bench)
     let anyLv = false;
     state.party.forEach(p => {
       const got = p === active() ? xp : Math.floor(xp * 0.5);
@@ -761,7 +756,7 @@ const Battle = (() => {
     });
     dialogueQueue = [
       `${state.enemy.char.name} was defeated!`,
-      `Earned ${gda} GDA credits.`,
+      `Earned ${butter} BUTTER.`,
       `${active().char.name} gained ${xp} XP.`
     ];
     if (state.party.length > 1) dialogueQueue.push(`${bench().char.name} gained ${Math.floor(xp * 0.5)} XP (bench).`);
@@ -770,37 +765,35 @@ const Battle = (() => {
     playQueue(() => {
       Game.markSceneWon(Game.state.currentScene);
       Game.save();
-      state.onEnd({ win: true, lvUp: anyLv, xp, gda });
+      state.onEnd({ win: true, lvUp: anyLv, xp, butter });
     });
   }
 
   function lose() {
     dialogueQueue = [`${active().char.name} was defeated...`];
     if (state.scripted) {
-      // Scripted-loss tutorial: still pays the full reward — you completed story progress
-      const gdaMult = Game.state.permaBuffs?.global?.gdaMult || 1;
-      const reward = Math.floor((state.enemy.char.gda || 0) * gdaMult);
-      Game.state.gda += reward;
+      const butterMult = Game.state.permaBuffs?.global?.butterMult || 1;
+      const reward = Math.floor((state.enemy.char.butter || 0) * butterMult);
+      Game.state.butter += reward;
       dialogueQueue.push('The fight was always going to end this way.');
-      if (reward > 0) dialogueQueue.push(`Earned ${reward} GDA from the encounter.`);
+      if (reward > 0) dialogueQueue.push(`Earned ${reward} BUTTER from the encounter.`);
       renderAll();
       playQueue(() => {
         Game.markSceneWon(Game.state.currentScene);
         Game.save();
-        state.onEnd({ win: false, scripted: true, gda: reward });
+        state.onEnd({ win: false, scripted: true, butter: reward });
       });
       return;
     }
-    // Normal loss: consolation 12% of would-be reward (small, but never zero)
-    const gdaMult = Game.state.permaBuffs?.global?.gdaMult || 1;
-    const consolation = Math.floor((state.enemy.char.gda || 0) * 0.12 * gdaMult);
+    const butterMult = Game.state.permaBuffs?.global?.butterMult || 1;
+    const consolation = Math.floor((state.enemy.char.butter || 0) * 0.12 * butterMult);
     if (consolation > 0) {
-      Game.state.gda += consolation;
-      dialogueQueue.push(`Consolation pay: +${consolation} GDA from GDA emergency fund.`);
+      Game.state.butter += consolation;
+      dialogueQueue.push(`Consolation pay: +${consolation} BUTTER.`);
     }
-    dialogueQueue.push('Retreat to base. Regroup.');
+    dialogueQueue.push('Retreat to the kitchen. Regroup.');
     renderAll();
-    playQueue(() => { Game.save(); state.onEnd({ win: false, gda: consolation }); });
+    playQueue(() => { Game.save(); state.onEnd({ win: false, butter: consolation }); });
   }
 
   function flee() {

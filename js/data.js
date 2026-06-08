@@ -1,514 +1,385 @@
-// INVINCIBLE: SIMULATION — game data v0.3
+// ╔════════════════════════════════════════════════════════════╗
+// ║  PANCAKE BUNNY — RPG · v1.0                                ║
+// ║  Three breakfast heroes vs the rest of the kitchen.        ║
+// ╚════════════════════════════════════════════════════════════╝
 
 const TYPES = {
   PHYSICAL: { name: 'PHYSICAL', color: '#ff6a3a' },
-  ENERGY:   { name: 'ENERGY',   color: '#00f0ff' },
-  COSMIC:   { name: 'COSMIC',   color: '#ff2bd6' },
-  TECH:     { name: 'TECH',     color: '#34ff7a' },
-  BIO:      { name: 'BIO',      color: '#9a6cff' },
-  MENTAL:   { name: 'MENTAL',   color: '#ffd400' }
+  ELECTRIC: { name: 'ELECTRIC', color: '#00f0ff' },   // re-skin of ENERGY
+  BLAST:    { name: 'BLAST',    color: '#ff2bd6' },   // re-skin of COSMIC
+  STEEL:    { name: 'STEEL',    color: '#34ff7a' },   // re-skin of TECH
+  HEAL:     { name: 'HEAL',     color: '#9a6cff' },   // re-skin of BIO (used for healer moves)
+  FOOD:     { name: 'FOOD',     color: '#ffd400' }    // re-skin of MENTAL — quirky food-based moves
 };
 
+// Tags the defender carries; the move's type vs defender's tag = multiplier.
+const TAGS = {
+  BREAKFAST: 'BREAKFAST',  // our heroes
+  BURNT:     'BURNT',      // toast, charcoal, smoke
+  DAIRY:     'DAIRY',      // milk, butter, yogurt
+  METAL:     'METAL',      // appliances, utensils
+  SUGAR:     'SUGAR',      // cereal, syrup, sweets
+  GREASE:    'GREASE'      // bacon, eggs, oil
+};
+
+// Type chart — what each ATK type does to each DEFENDER tag
 const TYPE_CHART = {
-  PHYSICAL: { VILTRUMITE: 0.5, TECH: 1.5, BIO: 1.0 },
-  ENERGY:   { VILTRUMITE: 1.0, TECH: 1.5, BIO: 0.75 },
-  COSMIC:   { VILTRUMITE: 2.0, TECH: 1.0, BIO: 1.25 },
-  TECH:     { VILTRUMITE: 1.0, TECH: 0.5, BIO: 1.0 },
-  BIO:      { VILTRUMITE: 0.5, TECH: 0.5, BIO: 1.5 },
-  MENTAL:   { VILTRUMITE: 1.25, TECH: 0.25, BIO: 1.5 }
+  PHYSICAL: { BREAKFAST: 1.0, BURNT: 1.25, DAIRY: 1.0,  METAL: 0.5,  SUGAR: 1.0,  GREASE: 1.0 },
+  ELECTRIC: { BREAKFAST: 1.0, BURNT: 1.0,  DAIRY: 1.5,  METAL: 2.0,  SUGAR: 0.75, GREASE: 1.25 },
+  BLAST:    { BREAKFAST: 1.25,BURNT: 0.5,  DAIRY: 1.5,  METAL: 1.5,  SUGAR: 1.5,  GREASE: 1.25 },
+  STEEL:    { BREAKFAST: 1.0, BURNT: 1.0,  DAIRY: 1.25, METAL: 0.5,  SUGAR: 1.0,  GREASE: 1.0 },
+  HEAL:     { BREAKFAST: 0.0, BURNT: 0.0,  DAIRY: 0.0,  METAL: 0.0,  SUGAR: 0.0,  GREASE: 0.0 }, // does no damage anyway
+  FOOD:     { BREAKFAST: 1.5, BURNT: 0.75, DAIRY: 1.0,  METAL: 0.25, SUGAR: 1.5,  GREASE: 1.25 }
 };
 
 const MOVES = {
-  punch:       { name: 'PUNCH',        type: 'PHYSICAL', power: 18, ep: 0,  desc: 'A basic strike.' },
-  flyKick:     { name: 'FLY KICK',     type: 'PHYSICAL', power: 28, ep: 4,  desc: 'Dive-bomb the target.' },
-  haymaker:    { name: 'HAYMAKER',     type: 'PHYSICAL', power: 42, ep: 10, desc: 'Wind up. Hits hard.' },
-  sonicBoom:   { name: 'SONIC BOOM',   type: 'ENERGY',   power: 32, ep: 8,  desc: 'Break the sound barrier on impact.' },
-  uppercut:    { name: 'UPPERCUT',     type: 'PHYSICAL', power: 36, ep: 8,  desc: 'Launch them skyward.' },
-  rage:        { name: 'RAGE',         type: 'PHYSICAL', power: 60, ep: 18, desc: 'No limits. No mercy.' },
-  starePunch:  { name: 'STARE PUNCH',  type: 'COSMIC',   power: 55, ep: 14, desc: 'Channel the look.' },
+  // ===== PANCAKE BUNNY (ELECTRIC main) =====
+  zap:          { name: 'ZAP',           type: 'ELECTRIC', power: 18, ep: 0,  desc: 'A light static jolt.' },
+  shock:        { name: 'SHOCK',         type: 'ELECTRIC', power: 28, ep: 4,  desc: 'Localized arc of current.' },
+  staticBurst:  { name: 'STATIC BURST',  type: 'ELECTRIC', power: 42, ep: 10, desc: 'Detonate every static fiber in the air.' },
+  thunderkick:  { name: 'THUNDERKICK',   type: 'ELECTRIC', power: 36, ep: 8,  desc: 'Kick wreathed in lightning.' },
+  overcharge:   { name: 'OVERCHARGE',    type: 'ELECTRIC', power: 60, ep: 18, desc: 'Pull current from the whole room.' },
+  pancakeFlip:  { name: 'PANCAKE FLIP',  type: 'PHYSICAL', power: 32, ep: 6,  desc: 'Flip the enemy like a flapjack.' },
+  thunderdome:  { name: 'THUNDERDOME',   type: 'ELECTRIC', power: 85, ep: 26, desc: 'Cage them in spheres of lightning.' },
 
-  pinkBlast:   { name: 'PINK BLAST',   type: 'ENERGY',   power: 26, ep: 5,  desc: 'Focused matter beam.' },
-  shieldWall:  { name: 'SHIELD WALL',  type: 'ENERGY',   power: 0,  ep: 6,  desc: 'Halve next incoming hit.' },
-  reshape:     { name: 'RESHAPE',      type: 'COSMIC',   power: 30, ep: 10, desc: 'Reform matter into a strike.' },
-  burst:       { name: 'BURST',        type: 'ENERGY',   power: 48, ep: 14, desc: 'Wide-area pink detonation.' },
+  // ===== WAFFLE RABBIT (BLAST / glass cannon) =====
+  toss:         { name: 'TOSS',          type: 'PHYSICAL', power: 16, ep: 0,  desc: 'A casual lobbed projectile.' },
+  fuse:         { name: 'FUSE',          type: 'BLAST',    power: 26, ep: 5,  desc: 'Lit short fuse, primed for impact.' },
+  boomCharge:   { name: 'BOOM CHARGE',   type: 'BLAST',    power: 48, ep: 12, desc: 'Run in fast, explode on contact.' },
+  syrupSlick:   { name: 'SYRUP SLICK',   type: 'FOOD',     power: 28, ep: 8,  desc: 'Slick that ignites on impact.' },
+  detonation:   { name: 'DETONATION',    type: 'BLAST',    power: 72, ep: 20, desc: 'Walk away from the explosion in slow-mo.' },
+  waffleStorm:  { name: 'WAFFLE STORM',  type: 'BLAST',    power: 95, ep: 28, desc: 'Forty waffles, all on fire, raining down.' },
 
-  bite:        { name: 'BITE',         type: 'BIO',      power: 16, ep: 0,  desc: 'Tear in.' },
-  slam:        { name: 'SLAM',         type: 'PHYSICAL', power: 22, ep: 0,  desc: 'Body slam.' },
-  quake:       { name: 'QUAKE',        type: 'PHYSICAL', power: 30, ep: 8,  desc: 'Shake the ground.' },
-  conquestFist:{ name: 'CONQUEST FIST',type: 'PHYSICAL', power: 50, ep: 12, desc: 'A hammer in the shape of a man.' },
-  laserBlast:  { name: 'LASER BLAST',  type: 'ENERGY',   power: 24, ep: 6,  desc: 'Twin red beams.' },
+  // ===== BUTTA DAWG (HEALER) =====
+  bonk:         { name: 'BONK',          type: 'PHYSICAL', power: 12, ep: 0,  desc: 'A friendly head-bonk.' },
+  lickWound:    { name: 'LICK WOUND',    type: 'HEAL',     power: 0,  ep: 8,  desc: 'Restore 35% HP to active fighter.' },
+  butterBath:   { name: 'BUTTER BATH',   type: 'HEAL',     power: 0,  ep: 20, desc: 'Coat the whole party in butter — heal everyone 50%.' },
+  goodBoyAura:  { name: 'GOOD BOY AURA', type: 'FOOD',     power: 0,  ep: 10, desc: 'Buff party DEF for 3 turns.' },
+  fetch:        { name: 'FETCH',         type: 'PHYSICAL', power: 24, ep: 4,  desc: 'Bring back something blunt and heavy.' },
+  bark:         { name: 'BARK',          type: 'FOOD',     power: 35, ep: 8,  desc: 'A bark so loud it staggers them.' },
+  bigBark:      { name: 'BIG BARK',      type: 'FOOD',     power: 64, ep: 18, desc: 'A bark that breaks ceramic.' },
 
-  // Boss-tier moves
-  omniSlap:    { name: 'OMNI SLAP',    type: 'PHYSICAL', power: 90, ep: 0,  desc: 'A father\'s hand. Devastating.' },
-  maceCrush:   { name: 'MACE CRUSH',   type: 'PHYSICAL', power: 65, ep: 16, desc: 'Two-handed downward smash.' },
-  bloodRage:   { name: 'BLOOD RAGE',   type: 'PHYSICAL', power: 80, ep: 20, desc: 'No restraint. No tomorrow.' },
-  finalWord:   { name: 'FINAL WORD',   type: 'COSMIC',   power: 110, ep: 30, desc: 'The fight ends here.' },
+  // ===== ENEMY MOVES =====
+  crumble:      { name: 'CRUMBLE',       type: 'PHYSICAL', power: 18, ep: 0,  desc: 'Shed burnt crumbs at speed.' },
+  scorch:       { name: 'SCORCH',        type: 'BLAST',    power: 28, ep: 6,  desc: 'A small house fire.' },
+  drip:         { name: 'DRIP',          type: 'HEAL',     power: 0,  ep: 4,  desc: '(used by enemies to heal self)' },
+  curdle:       { name: 'CURDLE',        type: 'FOOD',     power: 22, ep: 4,  desc: 'Spray sour clumps.' },
+  rancid:       { name: 'RANCID',        type: 'FOOD',     power: 38, ep: 10, desc: 'Smell so bad it does damage.' },
+  whiskCut:     { name: 'WHISK CUT',     type: 'STEEL',    power: 30, ep: 4,  desc: 'A blur of wire spokes.' },
+  microwaveRay: { name: 'MICRO RAY',     type: 'ELECTRIC', power: 36, ep: 8,  desc: 'Cook from inside out.' },
+  freezerBurn:  { name: 'FREEZER BURN',  type: 'STEEL',    power: 32, ep: 6,  desc: 'Cold-bite damage.' },
+  flameBurst:   { name: 'FLAME BURST',   type: 'BLAST',    power: 50, ep: 14, desc: 'Open flame from below.' },
 
-  // ===== SHOP TUTOR MOVES (Mark) =====
-  thrust:       { name: 'THRUST',       type: 'PHYSICAL', power: 24, ep: 3,  desc: 'Quick spear-strike with both hands.' },
-  doubleStrike: { name: 'DOUBLE STRIKE',type: 'PHYSICAL', power: 22, ep: 8,  desc: 'Hits twice in one turn.' },
-  skybreak:     { name: 'SKYBREAK',     type: 'PHYSICAL', power: 70, ep: 22, desc: 'Drop from orbit. Crater impact.' },
-  viltrumStrike:{ name: 'VILTRUM STRIKE',type: 'COSMIC',  power: 75, ep: 22, desc: 'A move only your blood can throw.' },
-  bloodFist:    { name: 'BLOOD FIST',   type: 'PHYSICAL', power: 95, ep: 28, desc: 'You feel it crack. Yours? His? Both.' },
-  novaBeam:     { name: 'NOVA BEAM',    type: 'COSMIC',   power: 68, ep: 18, desc: 'Stare. Concentrate. Detonate.' },
-  empGrid:      { name: 'EMP GRID',     type: 'TECH',     power: 50, ep: 14, desc: 'Frame the enemy in a static lattice.' },
-
-  // ===== SHOP TUTOR MOVES (Eve) =====
-  pinkShield:   { name: 'PINK SHIELD',  type: 'ENERGY',   power: 0,  ep: 8,  desc: 'Full damage block — single hit only.' },
-  novaBurst:    { name: 'NOVA BURST',   type: 'ENERGY',   power: 64, ep: 20, desc: 'Detonate a sphere of pink matter.' },
-  pinkRain:     { name: 'PINK RAIN',    type: 'COSMIC',   power: 38, ep: 16, desc: 'Shard fall. Wide hit.' },
-  atomicEdge:   { name: 'ATOMIC EDGE',  type: 'COSMIC',   power: 78, ep: 24, desc: 'Reshape the atoms of the air into blades.' },
-  healingPulse: { name: 'HEALING PULSE',type: 'BIO',      power: 0,  ep: 16, desc: 'Restore 60% HP to the active fighter.' },
-  meltdown:     { name: 'MELTDOWN',     type: 'BIO',      power: 88, ep: 26, desc: 'Force the enemy\'s cells to come apart.' },
-
-  // ===== ALLEN THE ALIEN MOVES =====
-  cosmicSlap:   { name: 'COSMIC SLAP',  type: 'PHYSICAL',power: 30, ep: 5,  desc: 'A casual smack from interstellar muscle.' },
-  starHook:     { name: 'STAR HOOK',    type: 'COSMIC',  power: 45, ep: 12, desc: 'A hook from across the galaxy.' },
-  galaxyRam:    { name: 'GALAXY RAM',   type: 'PHYSICAL',power: 65, ep: 18, desc: 'Head-down, full charge.' },
-  unopanWill:   { name: 'UNOPAN WILL',  type: 'MENTAL',  power: 50, ep: 14, desc: 'Channel his species\' iron resolve.' },
-
-  // ===== MARS BOSS MOVES =====
-  swarmBite:    { name: 'SWARM BITE',   type: 'BIO',     power: 28, ep: 4,  desc: 'A thousand small mouths.' },
-  scepterBolt:  { name: 'SCEPTER BOLT', type: 'COSMIC',  power: 40, ep: 10, desc: 'Crystallized authority.' },
-  unicycleRam:  { name: 'WHEEL RUSH',   type: 'PHYSICAL',power: 38, ep: 8,  desc: 'Run them over.' },
-  blasterShot:  { name: 'BLASTER SHOT', type: 'ENERGY',  power: 36, ep: 6,  desc: 'Plasma round, dead center.' },
-  beastFury:    { name: 'BEAST FURY',   type: 'PHYSICAL',power: 85, ep: 20, desc: 'Earth-shaking war cry.' },
-  thraggFist:   { name: 'THRAGG FIST',  type: 'PHYSICAL',power: 70, ep: 16, desc: 'The Emperor\'s correction.' },
-  worldEnder:   { name: 'WORLD ENDER',  type: 'COSMIC',  power: 130, ep: 36, desc: 'A move to end species.' },
-  empireDecree: { name: 'EMPIRE DECREE',type: 'MENTAL',  power: 75, ep: 22, desc: 'Order from a billion stars away.' }
+  // ===== BOSS MOVES =====
+  cerealStorm:  { name: 'CEREAL STORM',  type: 'FOOD',     power: 55, ep: 14, desc: 'A box poured over your head.' },
+  fridgeSlam:   { name: 'FRIDGE SLAM',   type: 'STEEL',    power: 70, ep: 18, desc: 'Tip the entire fridge onto you.' },
+  pyrolysis:    { name: 'PYROLYSIS',     type: 'BLAST',    power: 80, ep: 22, desc: 'Burn the oxygen out of the air.' },
+  motherKnows:  { name: 'MOTHER KNOWS',  type: 'FOOD',     power: 110,ep: 30, desc: 'A look so disappointed it does damage.' },
+  putItDown:    { name: 'PUT IT DOWN',   type: 'PHYSICAL', power: 95, ep: 24, desc: 'She takes the game from your paws.' },
+  bedtimeNow:   { name: 'BEDTIME NOW',   type: 'FOOD',     power: 130,ep: 36, desc: 'The final word. The lights go out.' }
 };
 
 const UTILITIES = {
-  suitUp:    { name: 'SUIT UP',    desc: 'Boost DEF for 3 turns.',  ep: 6,  effect: 'buff_def' },
-  heal:      { name: 'HEAL',       desc: 'Restore 40% HP.',         ep: 12, effect: 'heal' },
-  reshapeU:  { name: 'RESHAPE',    desc: 'Boost ATK for 3 turns.',  ep: 8,  effect: 'buff_atk' },
-  lecture:   { name: 'LECTURE',    desc: 'Lower enemy ATK.',        ep: 6,  effect: 'debuff_atk' },
-  focus:     { name: 'FOCUS',      desc: 'Restore 20 EP.',          ep: 0,  effect: 'restore_ep' }
+  charge:    { name: 'CHARGE',    desc: 'Boost ATK for 3 turns.',     ep: 6,  effect: 'buff_atk' },
+  ground:    { name: 'GROUND',    desc: 'Boost DEF for 3 turns.',     ep: 6,  effect: 'buff_def' },
+  patchUp:   { name: 'PATCH UP',  desc: 'Restore 40% HP.',            ep: 12, effect: 'heal' },
+  focus:     { name: 'FOCUS',     desc: 'Restore 20 EP.',             ep: 0,  effect: 'restore_ep' },
+  intimidate:{ name: 'INTIMIDATE',desc: 'Drop enemy ATK.',            ep: 6,  effect: 'debuff_atk' }
 };
 
 const CHARACTERS = {
-  mark: {
-    id: 'mark',
-    name: 'MARK',
-    sprite: 'assets/mark.png',
-    tag: 'VILTRUMITE',
-    baseHP: 70, baseEP: 28,
-    baseATK: 14, baseDEF: 11, baseSPD: 14,
-    bio: 'Half-Viltrumite. Learning what that means.',
+  pancake: {
+    id: 'pancake',
+    name: 'PANCAKE BUNNY',
+    sprite: 'assets/pancake.png',
+    tag: 'BREAKFAST',
+    baseHP: 80, baseEP: 40,
+    baseATK: 15, baseDEF: 12, baseSPD: 14,
+    bio: 'The leader. Static everywhere. Always tasting metal.',
     moveset: [
-      { lvl: 1, move: 'punch' },
-      { lvl: 1, move: 'flyKick' },
-      { lvl: 3, move: 'sonicBoom' },
-      { lvl: 5, move: 'uppercut' },
-      { lvl: 8, move: 'haymaker' },
-      { lvl: 12, move: 'starePunch' },
-      { lvl: 16, move: 'rage' }
+      { lvl: 1, move: 'zap' },
+      { lvl: 1, move: 'shock' },
+      { lvl: 3, move: 'pancakeFlip' },
+      { lvl: 5, move: 'thunderkick' },
+      { lvl: 8, move: 'staticBurst' },
+      { lvl: 12, move: 'overcharge' },
+      { lvl: 16, move: 'thunderdome' }
     ],
-    utilities: ['suitUp', 'focus']
+    utilities: ['charge', 'focus']
   },
-  eve: {
-    id: 'eve',
-    name: 'EVE',
-    sprite: 'assets/eve.png',
-    tag: 'BIO',
-    baseHP: 60, baseEP: 50,
-    baseATK: 12, baseDEF: 9, baseSPD: 13,
-    bio: 'Reshapes matter. Cares too much.',
+  waffle: {
+    id: 'waffle',
+    name: 'WAFFLE RABBIT',
+    sprite: 'assets/waffle.png',
+    tag: 'BREAKFAST',
+    baseHP: 65, baseEP: 50,
+    baseATK: 18, baseDEF: 8, baseSPD: 15,
+    bio: 'Wears the waffle. Hides the fuses underneath.',
     moveset: [
-      { lvl: 1, move: 'pinkBlast' },
-      { lvl: 1, move: 'shieldWall' },
-      { lvl: 4, move: 'reshape' },
-      { lvl: 9, move: 'burst' }
+      { lvl: 1, move: 'toss' },
+      { lvl: 1, move: 'fuse' },
+      { lvl: 3, move: 'boomCharge' },
+      { lvl: 6, move: 'syrupSlick' },
+      { lvl: 10, move: 'detonation' },
+      { lvl: 15, move: 'waffleStorm' }
     ],
-    utilities: ['heal', 'reshapeU', 'focus']
+    utilities: ['charge', 'intimidate']
   },
-  allen: {
-    id: 'allen',
-    name: 'ALLEN',
-    sprite: 'assets/allen.png',
-    tag: 'COSMIC',
-    baseHP: 90, baseEP: 42,
-    baseATK: 18, baseDEF: 13, baseSPD: 12,
-    bio: 'Unopan champion. Strong enough to bend a galaxy.',
+  butta: {
+    id: 'butta',
+    name: 'BUTTA DAWG',
+    sprite: 'assets/butta.png',
+    tag: 'BREAKFAST',
+    baseHP: 90, baseEP: 60,
+    baseATK: 10, baseDEF: 14, baseSPD: 11,
+    bio: 'Pat of butter on his head. Heals so hard it counts as offense.',
     moveset: [
-      { lvl: 1, move: 'cosmicSlap' },
-      { lvl: 1, move: 'starHook' },
-      { lvl: 4, move: 'unopanWill' },
-      { lvl: 8, move: 'galaxyRam' }
+      { lvl: 1, move: 'bonk' },
+      { lvl: 1, move: 'lickWound' },
+      { lvl: 3, move: 'goodBoyAura' },
+      { lvl: 5, move: 'fetch' },
+      { lvl: 8, move: 'bark' },
+      { lvl: 12, move: 'butterBath' },
+      { lvl: 16, move: 'bigBark' }
     ],
-    utilities: ['suitUp', 'focus']
+    utilities: ['patchUp', 'ground', 'focus']
   }
 };
 
-// Enemies — each can have intro/mid/outro/phase dialogue
 const ENEMIES = {
-  omniman: {
-    name: 'OMNI-BUNNY',
-    sprite: 'assets/omniman.png',
-    tag: 'VILTRUMITE',
-    hp: 400, ep: 80, atk: 32, def: 22, spd: 10,
-    slowChance: 0.25,
-    moves: ['omniSlap', 'haymaker', 'slam'],
-    intro: 'OMNI-BUNNY: "Are you sure you want to do this, son?"',
+  // ============ TUTORIAL ============
+  toast: {
+    name: 'BURNT TOAST',
+    sprite: 'assets/waffle.png', // placeholder reuse — user can swap later
+    tag: 'BURNT',
+    hp: 60, ep: 20, atk: 12, def: 8, spd: 6,
+    slowChance: 0.2,
+    moves: ['crumble', 'scorch'],
+    intro: 'A piece of BURNT TOAST stands up. It smells terrible.',
     midHpDialogue: [
-      { at: 0.8, text: 'OMNI-BUNNY: "You\'re holding back. So am I."' },
-      { at: 0.5, text: 'OMNI-BUNNY: "Think, Mark! THINK!"' },
-      { at: 0.2, text: 'OMNI-BUNNY: "You\'d still have me." (His voice cracks.)' }
+      { at: 0.5, text: 'TOAST: "I was forgotten in the toaster TWICE."' }
     ],
-    xp: 0, gda: 50,
-    scripted: true   // forced loss
+    xp: 50, butter: 35
   },
-  mauler: {
-    name: 'MAULER TWINS',
-    sprite: 'assets/mauler.png',
-    tag: 'TECH',
-    hp: 210, ep: 40, atk: 20, def: 14, spd: 7,
+  milk: {
+    name: 'SPOILED MILK',
+    sprite: 'assets/butta.png',
+    tag: 'DAIRY',
+    hp: 90, ep: 30, atk: 14, def: 10, spd: 8,
     slowChance: 0.15,
-    moves: ['slam', 'bite', 'quake'],
-    intro: 'TWIN A: "I\'m the original!" TWIN B: "No — *I* am!"',
+    canHeal: true, healAmount: 20, healThreshold: 0.5, healChance: 0.2,
+    healDialogue: 'MILK: "I curdle. I reform. The cycle continues."',
+    moves: ['curdle', 'rancid'],
+    intro: 'SPOILED MILK sloshes forward. The fumes already hurt.',
     midHpDialogue: [
-      { at: 0.6, text: 'TWIN A: "Hit him harder, you idiot!"' },
-      { at: 0.3, text: 'TWIN B: "Stop bossing me around — I\'M the original!"' }
+      { at: 0.4, text: 'MILK: "Expiration date? I never knew her."' }
     ],
-    xp: 60, gda: 45
+    xp: 80, butter: 60
   },
-  seismic: {
-    name: 'DOC SEISMIC',
-    sprite: 'assets/seismic.png',
-    tag: 'TECH',
-    hp: 270, ep: 65, atk: 22, def: 12, spd: 7,
-    slowChance: 0.2,
-    canHeal: true, healAmount: 35, healThreshold: 0.5, healChance: 0.3,
-    healDialogue: 'DOC SEISMIC: "The Earth provides!" (Stone tendrils mend his wounds.)',
-    moves: ['quake', 'slam', 'bite'],
-    intro: 'DOC SEISMIC: "The Earth speaks. LISTEN."',
-    midHpDialogue: [
-      { at: 0.5, text: 'DOC SEISMIC: "You can\'t punch a tectonic plate, kid!"' },
-      { at: 0.2, text: 'DOC SEISMIC: "FINE. The Earth dies WITH me!"' }
-    ],
-    xp: 90, gda: 70
-  },
-  flaxan: {
-    name: 'FLAXAN SOLDIER',
-    sprite: 'assets/flaxan.png',
-    tag: 'BIO',
-    hp: 300, ep: 55, atk: 20, def: 12, spd: 11,
-    slowChance: 0.1,
-    moves: ['bite', 'laserBlast', 'slam'],
-    intro: 'FLAXAN SOLDIER: "*kksskk* — Earth. Will. Fall."',
-    midHpDialogue: [
-      { at: 0.5, text: 'Another Flaxan portal opens behind it. Reinforcements?' },
-      { at: 0.25, text: 'FLAXAN SOLDIER: "TIME. SLOWS. FOR. YOU."' }
-    ],
-    xp: 110, gda: 85
-  },
-  angstrom: {
-    name: 'ANGSTROM LEVY',
-    sprite: 'assets/angstrom.png',
-    tag: 'TECH',
-    hp: 390, ep: 80, atk: 25, def: 16, spd: 9,
-    slowChance: 0.2,
-    canHeal: true, healAmount: 50, healThreshold: 0.4, healChance: 0.35,
-    healDialogue: 'ANGSTROM: "A version of me from another universe gave me this." (A green portal closes; his wounds are gone.)',
-    moves: ['laserBlast', 'slam', 'quake', 'haymaker'],
-    intro: 'ANGSTROM LEVY steps through a green portal. "You don\'t even remember, do you?"',
-    midHpDialogue: [
-      { at: 0.7, text: 'ANGSTROM: "In another universe, you destroyed everything."' },
-      { at: 0.4, text: 'ANGSTROM: "And in another. And another. AND ANOTHER."' },
-      { at: 0.15, text: 'ANGSTROM: "I\'m doing this for ALL of them."' }
-    ],
-    xp: 180, gda: 140
-  },
-  // CONQUEST has multi-phase script (handled specially in battle.js)
-  conquest: {
-    name: 'CONQUEST',
-    sprite: 'assets/conquest.png',
-    tag: 'VILTRUMITE',
-    hp: 680, ep: 130, atk: 36, def: 24, spd: 8,
-    slowChance: 0.2,
-    canHeal: true, healAmount: 70, healThreshold: 0.35, healChance: 0.3,
-    healDialogue: 'CONQUEST grins as his Viltrumite blood mends bone. "We don\'t die easy, boy."',
-    moves: ['haymaker', 'uppercut', 'slam'], // phase 1 moveset
-    intro: 'CONQUEST cracks his neck. "Finally. A real fight."',
-    phases: [
-      {
-        threshold: 1.0,
-        text: 'CONQUEST: "Show me what you\'ve got, boy."',
-        moves: ['haymaker', 'uppercut', 'slam']
-      },
-      {
-        threshold: 0.5,
-        text: 'CONQUEST: "Good. GOOD. Now you\'re fighting." (He raises his mace.)',
-        moves: ['conquestFist', 'maceCrush', 'haymaker'],
-        atkBuff: 4
-      },
-      {
-        threshold: 0.2,
-        text: 'CONQUEST: "Where is the GIRL? Hit me with EVERYTHING."',
-        moves: ['bloodRage', 'finalWord', 'conquestFist', 'maceCrush'],
-        atkBuff: 8,
-        spdBuff: 4
-      }
-    ],
-    xp: 500, gda: 400
-  },
-
-  // ============ MARS ENEMIES ============
-  princess: {
-    name: 'MARTIAN PRINCESS',
-    sprite: 'assets/princess.png',
-    tag: 'MENTAL',
-    hp: 480, ep: 105, atk: 32, def: 20, spd: 11,
-    slowChance: 0.15,
-    canHeal: true, healAmount: 40, healThreshold: 0.4, healChance: 0.25,
-    healDialogue: 'PRINCESS: "The Court mends what you would break."',
-    moves: ['scepterBolt', 'unopanWill', 'slam'],
-    intro: 'MARTIAN PRINCESS: "You came armed. Bold. Continue if you wish to be tested."',
-    midHpDialogue: [
-      { at: 0.6, text: 'PRINCESS: "You strike like one of theirs."' },
-      { at: 0.3, text: 'PRINCESS: "Enough. I have seen what I needed."' }
-    ],
-    xp: 220, gda: 180
-  },
-  sequid: {
-    name: 'SEQUID SWARM',
-    sprite: 'assets/sequid.png',
-    tag: 'BIO',
-    hp: 570, ep: 80, atk: 22, def: 10, spd: 14,
-    slowChance: 0.1,
-    moves: ['swarmBite', 'bite', 'slam'],
-    intro: 'SEQUID SWARM ripples — a thousand voices in one wet whisper.',
-    midHpDialogue: [
-      { at: 0.66, text: 'They split. There are MORE of them now.' },
-      { at: 0.33, text: 'They split AGAIN. The hum is deafening.' }
-    ],
-    xp: 260, gda: 200
-  },
-  battle_beast: {
-    name: 'BATTLE BEAST',
-    sprite: 'assets/battle_beast.png',
-    tag: 'VILTRUMITE',
-    hp: 630, ep: 130, atk: 40, def: 24, spd: 10,
-    slowChance: 0.2,
-    moves: ['beastFury', 'haymaker', 'uppercut', 'slam'],
-    intro: 'BATTLE BEAST: "I have killed worlds. SHOW ME WHY YOU\'RE WORTH MY TIME."',
-    midHpDialogue: [
-      { at: 0.7, text: 'BATTLE BEAST: "Better. Better!"' },
-      { at: 0.4, text: 'BATTLE BEAST: "YES — finally a hunt."' },
-      { at: 0.2, text: 'BATTLE BEAST stops, breathing hard. "Enough. You\'ve earned the air you breathe."' }
-    ],
-    xp: 0, gda: 250,
-    scripted: true  // unwinnable — survive to "win" the encounter
-  },
-  allen_enemy: {
-    name: 'ALLEN',
-    sprite: 'assets/allen.png',
-    tag: 'COSMIC',
-    hp: 540, ep: 105, atk: 32, def: 20, spd: 12,
-    slowChance: 0.15,
-    moves: ['cosmicSlap', 'starHook', 'galaxyRam', 'slam'],
-    intro: 'ALLEN: "You\'re wearing the colors. Talk fast."',
-    midHpDialogue: [
-      { at: 0.6, text: 'ALLEN: "Wait — you fight like Nolan, but not like a Viltrumite."' },
-      { at: 0.25, text: 'ALLEN lowers his fists. "OK. OK. I get it. Stop hitting me."' }
-    ],
-    xp: 300, gda: 250
-  },
-  space_racer: {
-    name: 'SPACE RACER',
-    sprite: 'assets/space_racer.png',
-    tag: 'TECH',
-    hp: 420, ep: 95, atk: 30, def: 16, spd: 18,
+  whisk: {
+    name: 'THE WHISK',
+    sprite: 'assets/waffle.png',
+    tag: 'METAL',
+    hp: 110, ep: 25, atk: 18, def: 9, spd: 16,
     slowChance: 0.05,
-    moves: ['blasterShot', 'unicycleRam', 'laserBlast'],
-    intro: 'SPACE RACER revs his wheel. "Bounty\'s a bounty, kid."',
+    moves: ['whiskCut', 'crumble'],
+    intro: 'THE WHISK spins itself awake. Wire spokes flare out.',
     midHpDialogue: [
-      { at: 0.5, text: 'SPACE RACER: "Tch. They underbid this job."' },
-      { at: 0.2, text: 'SPACE RACER: "Fine, fine. Not worth the paint job."' }
+      { at: 0.5, text: 'THE WHISK whirls faster, slicing the air.' }
     ],
-    xp: 320, gda: 280
+    xp: 110, butter: 90
   },
-  thaedus: {
-    name: 'THAEDUS',
-    sprite: 'assets/thaedus.png',
-    tag: 'VILTRUMITE',
-    hp: 780, ep: 140, atk: 42, def: 28, spd: 8,
-    slowChance: 0.25,
-    canHeal: true, healAmount: 70, healThreshold: 0.4, healChance: 0.3,
-    healDialogue: 'THAEDUS: "I have lived a long time, child. Long enough to mend." (His wounds close.)',
-    moves: ['viltrumStrike', 'haymaker', 'uppercut', 'maceCrush'],
-    intro: 'THAEDUS: "I left the Empire to find something better than killing. Don\'t make me prove I still can."',
+  microwave: {
+    name: 'MICROWAVE',
+    sprite: 'assets/butta.png',
+    tag: 'METAL',
+    hp: 160, ep: 60, atk: 18, def: 14, spd: 8,
+    slowChance: 0.2,
+    moves: ['microwaveRay', 'whiskCut', 'flameBurst'],
+    intro: 'MICROWAVE: "*30 SECONDS REMAINING.*"',
     midHpDialogue: [
-      { at: 0.7, text: 'THAEDUS: "Good. You\'re not Nolan."' },
-      { at: 0.4, text: 'THAEDUS: "BETTER than him. Maybe."' },
-      { at: 0.2, text: 'THAEDUS: "I leave Mars in your hands."' }
+      { at: 0.5, text: 'MICROWAVE: "*REHEAT MODE.*"' },
+      { at: 0.2, text: 'MICROWAVE: "*ARC FAULT DETECTED.*"' }
     ],
-    xp: 450, gda: 380
+    xp: 150, butter: 130
   },
-  kregg: {
-    name: 'GENERAL KREGG',
-    sprite: 'assets/kregg.png',
-    tag: 'VILTRUMITE',
-    hp: 840, ep: 130, atk: 44, def: 26, spd: 12,
-    slowChance: 0.1,  // aggressive — barely winds up
-    moves: ['thraggFist', 'haymaker', 'uppercut', 'omniSlap'],
-    intro: 'GENERAL KREGG: "The Empire does not forget. The Empire does not forgive."',
+  fridge: {
+    name: 'THE FRIDGE',
+    sprite: 'assets/pancake.png',
+    tag: 'METAL',
+    hp: 240, ep: 70, atk: 20, def: 22, spd: 5,
+    slowChance: 0.3,
+    canHeal: true, healAmount: 35, healThreshold: 0.4, healChance: 0.25,
+    healDialogue: 'FRIDGE: "Self-defrost cycle complete." (Damage seals over.)',
+    moves: ['fridgeSlam', 'freezerBurn', 'crumble'],
+    intro: 'THE FRIDGE looms. The motor hum is hostile.',
     midHpDialogue: [
-      { at: 0.5, text: 'KREGG: "Predictable. Disappointing."' },
-      { at: 0.2, text: 'KREGG: "FOR THRAGG."' }
+      { at: 0.5, text: 'FRIDGE: "Door alarm. DOOR ALARM."' },
+      { at: 0.2, text: 'FRIDGE: "WARRANTY VOID. UPGRADING TO COMBAT MODE."' }
     ],
-    xp: 520, gda: 460
+    xp: 240, butter: 200
   },
-  thragg: {
-    name: 'THRAGG',
-    sprite: 'assets/thragg.png',
-    tag: 'VILTRUMITE',
-    hp: 1100, ep: 200, atk: 48, def: 32, spd: 9,
+  // ============ MINI BOSS ============
+  cereal: {
+    name: 'CEREAL KILLER',
+    sprite: 'assets/waffle.png',
+    tag: 'SUGAR',
+    hp: 320, ep: 90, atk: 24, def: 14, spd: 12,
     slowChance: 0.15,
-    canHeal: true, healAmount: 90, healThreshold: 0.3, healChance: 0.25,
-    healDialogue: 'THRAGG: "I am the Empire. The Empire endures." (His wounds close in seconds.)',
-    moves: ['thraggFist', 'haymaker', 'uppercut'],
-    intro: 'THRAGG looks down at you. "Another half-breed. I will be brief."',
+    moves: ['cerealStorm', 'crumble', 'rancid', 'curdle'],
+    intro: 'CEREAL KILLER tips a hundred boxes over the floor. "BREAKFAST IS SERVED."',
+    midHpDialogue: [
+      { at: 0.5, text: 'CEREAL KILLER: "You\'re missing the marshmallows on purpose, aren\'t you."' },
+      { at: 0.2, text: 'CEREAL KILLER: "FINE. THE MASCOTS DIE WITH ME."' }
+    ],
+    xp: 340, butter: 300
+  },
+  // ============ BOSS ============
+  stove: {
+    name: 'STOVE LORD',
+    sprite: 'assets/pancake.png',
+    tag: 'METAL',
+    hp: 450, ep: 120, atk: 30, def: 22, spd: 9,
+    slowChance: 0.2,
+    canHeal: true, healAmount: 60, healThreshold: 0.35, healChance: 0.3,
+    healDialogue: 'STOVE LORD: "The pilot light NEVER dies." (Burners reignite, wounds close.)',
+    moves: ['pyrolysis', 'flameBurst', 'microwaveRay'],
+    intro: 'STOVE LORD: "I have COOKED for generations of this house. Who are YOU to interrupt breakfast?"',
+    midHpDialogue: [
+      { at: 0.6, text: 'STOVE LORD: "All four burners. HIGH."' },
+      { at: 0.3, text: 'STOVE LORD: "The OVEN was a SUGGESTION. Now it\'s INEVITABLE."' }
+    ],
+    xp: 500, butter: 450
+  },
+  // ============ FINAL BOSS ============
+  mama: {
+    name: 'MAMA BUNNY',
+    sprite: 'assets/butta.png',
+    tag: 'BREAKFAST',
+    hp: 750, ep: 180, atk: 36, def: 26, spd: 10,
+    slowChance: 0.18,
+    canHeal: true, healAmount: 85, healThreshold: 0.3, healChance: 0.3,
+    healDialogue: 'MAMA BUNNY: "I raised you. Did you think you could END me?" (She heals.)',
+    moves: ['motherKnows', 'putItDown', 'cerealStorm'],
+    intro: 'MAMA BUNNY: "Sweetie. It\'s time to PUT THE GAME DOWN."',
     phases: [
       {
         threshold: 1.0,
-        text: 'THRAGG: "Show me what Nolan\'s child can do."',
-        moves: ['thraggFist', 'haymaker', 'uppercut']
+        text: 'MAMA BUNNY: "Just one fight. Then dinner."',
+        moves: ['motherKnows', 'cerealStorm', 'putItDown']
       },
       {
-        threshold: 0.5,
-        text: 'THRAGG: "Adequate. I will use both hands now."',
-        moves: ['thraggFist', 'maceCrush', 'empireDecree', 'haymaker'],
-        atkBuff: 4
+        threshold: 0.55,
+        text: 'MAMA BUNNY: "I said. PUT. IT. DOWN."',
+        moves: ['putItDown', 'motherKnows', 'pyrolysis', 'cerealStorm'],
+        atkBuff: 5
       },
       {
-        threshold: 0.2,
-        text: 'THRAGG: "I have a billion children. You have ONE life."',
-        moves: ['worldEnder', 'empireDecree', 'thraggFist', 'finalWord'],
-        atkBuff: 10, spdBuff: 4
+        threshold: 0.22,
+        text: 'MAMA BUNNY pulls out HER mom\'s wooden spoon. "I love you. Goodnight."',
+        moves: ['bedtimeNow', 'motherKnows', 'putItDown'],
+        atkBuff: 10, spdBuff: 5
       }
     ],
-    xp: 800, gda: 700
+    xp: 900, butter: 800
   }
 };
 
 const SCENES = [
-  // ============ EARTH ============
-  { region: 'earth', id: 's0', num: '00', title: 'OMNI-BUNNY (TUTORIAL)', desc: 'Your father. Your hero. Your first real fight.', enemy: 'omniman', recLvl: 1, scripted: true, forceCharacter: 'mark' },
-  { region: 'earth', id: 's1', num: '01', title: 'MAULER TWINS', desc: 'They both insist they\'re the original.', enemy: 'mauler', recLvl: 2 },
-  { region: 'earth', id: 's2', num: '02', title: 'DOC SEISMIC', desc: 'The street is shaking. So is he.', enemy: 'seismic', recLvl: 4 },
-  { region: 'earth', id: 's3', num: '03', title: 'FLAXAN INVASION', desc: 'They come through fast. Hit faster.', enemy: 'flaxan', recLvl: 6 },
-  { region: 'earth', id: 's4', num: '04', title: 'ANGSTROM LEVY', desc: 'He remembers a thousand versions of you.', enemy: 'angstrom', recLvl: 9 },
-  { region: 'earth', id: 's5', num: '05', title: 'CONQUEST', desc: 'The fight that defines you.', enemy: 'conquest', recLvl: 14, boss: true },
-
-  // ============ MARS (unlocks after s5) ============
-  { region: 'mars', id: 'm1', num: '01', title: 'MARTIAN PRINCESS', desc: 'She rules a dying world. She\'s testing you.',  enemy: 'princess',    recLvl: 16 },
-  { region: 'mars', id: 'm2', num: '02', title: 'SEQUID SWARM',     desc: 'They split when you hit them. Hit anyway.',      enemy: 'sequid',      recLvl: 17 },
-  { region: 'mars', id: 'm3', num: '03', title: 'BATTLE BEAST',     desc: 'He wants a real fight. Survive.',                 enemy: 'battle_beast',recLvl: 19, scripted: true },
-  { region: 'mars', id: 'm4', num: '04', title: 'ALLEN THE ALIEN',  desc: 'He thinks you\'re Viltrumite scum. Prove him wrong.',enemy: 'allen_enemy', recLvl: 20, recruitsOnWin: 'allen' },
-  { region: 'mars', id: 'm5', num: '05', title: 'SPACE RACER',      desc: 'Bounty hunter on a unicycle. Don\'t laugh.',      enemy: 'space_racer', recLvl: 22 },
-  { region: 'mars', id: 'm6', num: '06', title: 'THAEDUS',          desc: 'The Viltrumite who turned. Brutal but slow.',     enemy: 'thaedus',     recLvl: 24 },
-  { region: 'mars', id: 'm7', num: '07', title: 'GENERAL KREGG',    desc: 'Thragg\'s right hand. The Empire does not forget.', enemy: 'kregg',     recLvl: 26 },
-  { region: 'mars', id: 'm8', num: '08', title: 'THRAGG',           desc: 'The Emperor. The end.',                            enemy: 'thragg',      recLvl: 30, boss: true }
+  { region: 'kitchen', id: 'k0', num: '00', title: 'BURNT TOAST',    desc: 'It crawled out of the toaster. Show it the door.',    enemy: 'toast',     recLvl: 1 },
+  { region: 'kitchen', id: 'k1', num: '01', title: 'SPOILED MILK',   desc: 'Past expiration. Past reason.',                       enemy: 'milk',      recLvl: 3 },
+  { region: 'kitchen', id: 'k2', num: '02', title: 'THE WHISK',      desc: 'Wire-fast. Hard to track. Easy to bend.',             enemy: 'whisk',     recLvl: 5 },
+  { region: 'kitchen', id: 'k3', num: '03', title: 'MICROWAVE',      desc: 'Beeping the war drum.',                               enemy: 'microwave', recLvl: 7 },
+  { region: 'kitchen', id: 'k4', num: '04', title: 'THE FRIDGE',     desc: 'It hums hostility.',                                  enemy: 'fridge',    recLvl: 9 },
+  { region: 'kitchen', id: 'k5', num: '05', title: 'CEREAL KILLER',  desc: 'A mascot-fueled stand-off.',                          enemy: 'cereal',    recLvl: 11, boss: true },
+  { region: 'kitchen', id: 'k6', num: '06', title: 'STOVE LORD',     desc: 'Four burners. One judgment.',                         enemy: 'stove',     recLvl: 14, boss: true },
+  { region: 'kitchen', id: 'k7', num: '07', title: 'MAMA BUNNY',     desc: 'She just wants you to come to the table.',            enemy: 'mama',      recLvl: 17, boss: true }
 ];
 
 const SHOP_DATA = {
   items: [
-    // ----- HEALING -----
-    { id: 'stim',        name: 'GDA STIM',       desc: 'Restore 50 HP in battle.',         price: 50,  currency: 'gda' },
-    { id: 'patch',       name: 'AURA PATCH',     desc: 'Restore 30 HP + 10 EP.',           price: 80,  currency: 'gda' },
-    { id: 'mega_stim',   name: 'MEGA STIM',      desc: 'Restore 100 HP.',                  price: 140, currency: 'gda' },
-    { id: 'ultra_stim',  name: 'ULTRA STIM',     desc: 'Fully restore HP.',                price: 280, currency: 'gda' },
-    { id: 'elixir',      name: 'ELIXIR',         desc: 'Fully restore HP and EP.',         price: 450, currency: 'gda' },
+    // ----- HEALING (BUTTER) -----
+    { id: 'crumb',       name: 'CRUMB',           desc: 'Restore 40 HP in battle.',       price: 40,  currency: 'butter' },
+    { id: 'pat',         name: 'PAT OF BUTTER',   desc: 'Restore 75 HP.',                 price: 90,  currency: 'butter' },
+    { id: 'stack',       name: 'PANCAKE STACK',   desc: 'Restore 150 HP.',                price: 180, currency: 'butter' },
+    { id: 'feast',       name: 'BREAKFAST FEAST', desc: 'Fully restore HP.',              price: 320, currency: 'butter' },
 
-    // ----- EP / RESOURCE -----
-    { id: 'focus_tab',   name: 'FOCUS TAB',      desc: 'Restore 20 EP.',                   price: 60,  currency: 'gda' },
-    { id: 'battery',     name: 'BATTERY CELL',   desc: 'Restore 40 EP.',                   price: 120, currency: 'gda' },
-    { id: 'mind_link',   name: 'MIND LINK',      desc: 'Fully restore EP.',                price: 220, currency: 'gda' },
+    // ----- EP -----
+    { id: 'spark',       name: 'SPARK',           desc: 'Restore 25 EP.',                 price: 60,  currency: 'butter' },
+    { id: 'jolt',        name: 'JOLT',            desc: 'Restore 50 EP.',                 price: 120, currency: 'butter' },
+    { id: 'capacitor',   name: 'CAPACITOR',       desc: 'Fully restore EP.',              price: 250, currency: 'butter' },
 
-    // ----- COMBAT BOOSTS -----
-    { id: 'berserker',   name: 'BERSERKER BREW', desc: '+ATK for 3 turns.',                price: 140, currency: 'gda' },
-    { id: 'iron_skin',   name: 'IRON SKIN',      desc: '+DEF for 3 turns.',                price: 140, currency: 'gda' },
-    { id: 'damage_chg',  name: 'DAMAGE CHARGE',  desc: 'Next move deals 2x damage.',       price: 180, currency: 'gda' },
-    { id: 'smoke_bomb',  name: 'SMOKE BOMB',     desc: 'Next enemy hit will miss.',        price: 120, currency: 'gda' },
+    // ----- COMBAT -----
+    { id: 'energy_drink',name: 'ENERGY DRINK',    desc: '+ATK for 3 turns.',              price: 130, currency: 'butter' },
+    { id: 'bacon_grease',name: 'BACON GREASE',    desc: '+DEF for 3 turns.',              price: 130, currency: 'butter' },
+    { id: 'syrup_charge',name: 'SYRUP CHARGE',    desc: 'Next move deals 2x damage.',     price: 200, currency: 'butter' },
+    { id: 'cloak',       name: 'NAPKIN CLOAK',    desc: 'Dodge next enemy hit.',          price: 140, currency: 'butter' },
 
-    // ----- DIRECT DAMAGE / UTILITY -----
-    { id: 'emp_nade',    name: 'EMP GRENADE',    desc: 'Deal 80 fixed damage to the enemy.', price: 160, currency: 'gda' },
-    { id: 'thermite',    name: 'THERMITE CHARGE',desc: 'Deal 120 fixed damage to the enemy.', price: 260, currency: 'gda' },
+    // ----- DAMAGE ITEMS -----
+    { id: 'firecracker', name: 'FIRECRACKER',     desc: 'Deal 70 fixed damage.',          price: 160, currency: 'butter' },
+    { id: 'm80',         name: 'M-80',            desc: 'Deal 130 fixed damage.',         price: 280, currency: 'butter' },
 
-    // ----- DEFENSE / CONTROL -----
-    { id: 'antidote',    name: 'ANTIDOTE',       desc: 'Restore 40 HP.',                   price: 90,  currency: 'gda' },
-    { id: 'second_wind', name: 'SECOND WIND',    desc: 'Clear all effects, restore 30 HP.',price: 130, currency: 'gda' },
-    { id: 'revive',      name: 'REVIVE',         desc: 'Survive the next lethal hit.',     price: 200, currency: 'gda' },
-    { id: 'phoenix',     name: 'PHOENIX DOWN',   desc: 'Auto-revive at 75% HP.',           price: 500, currency: 'gda' },
+    // ----- DEFENSE -----
+    { id: 'second_chance',name: 'SECOND CHANCE',  desc: 'Survive a fatal blow.',          price: 220, currency: 'butter' },
+    { id: 'phoenix_yolk', name: 'PHOENIX YOLK',   desc: 'Auto-revive at 80% HP.',         price: 500, currency: 'butter' },
 
-    // ----- PREMIUM (VM) -----
-    { id: 'gda_kit',     name: 'GDA FIELD KIT',  desc: 'Full party restore (HP+EP).',      price: 4,   currency: 'vm' },
-    { id: 'time_shard',  name: 'TIME SHARD',     desc: 'Take an extra turn this round.',   price: 6,   currency: 'vm' }
-  ],
-
-  suits: [
-    { id: 'classic',   name: 'CLASSIC BLUE',     desc: 'OG suit. No stat change.',                price: 0,    currency: 'gda', owned: true },
-    { id: 'black',     name: 'BLACK / GREY',     desc: 'Stealth-tinted variant.',                 price: 150,  currency: 'gda' },
-    { id: 'beaten',    name: 'BEAT-UP SUIT',     desc: 'Survivor of the Conquest fight.',         price: 500,  currency: 'gda' },
-    { id: 'training',  name: 'TRAINING GI',      desc: 'Loose grey gi. Casual day at the lab.',   price: 60,   currency: 'gda' },
-    { id: 'gda_agent', name: 'GDA AGENT',        desc: 'Cecil-coded charcoal field uniform.',     price: 220,  currency: 'gda' },
-    { id: 'omniman',   name: 'OMNI-MAN HOMAGE',  desc: 'White with the red collar. Tribute fit.', price: 400,  currency: 'gda' },
-    { id: 'viltrumite',name: 'VILTRUMITE WHITE', desc: 'Full empire whites. Looks like home.',    price: 650,  currency: 'gda' },
-    { id: 'streetwear',name: 'COLLEGE STREETWEAR',desc: 'Hoodie + jeans. Civilian Mark.',         price: 40,   currency: 'gda' },
-    { id: 'tux',       name: 'PROM TUX',         desc: 'For dates and existential dread.',        price: 100,  currency: 'gda' },
-    { id: 'multi_v1',  name: 'MULTIVERSE PURPLE',desc: 'From a darker timeline.',                 price: 350,  currency: 'gda' },
-    { id: 'multi_v2',  name: 'MULTIVERSE GOLD',  desc: 'From a brighter one.',                    price: 350,  currency: 'gda' },
-    { id: 'thragg',    name: 'THRAGG LORD',      desc: 'Crimson Viltrumite armor.',               price: 800,  currency: 'gda' },
-    { id: 'streamer',  name: 'STREAMER LOGO',    desc: 'Sponsored-content variant.',              price: 120,  currency: 'gda' },
-    { id: 'training2', name: 'BLOOD-SOAKED',     desc: 'Used. Stained. Loved.',                   price: 700,  currency: 'gda' },
-    { id: 'glow',      name: 'NEON GLOW',        desc: 'Hot cyan trim. Cyber GUI canon.',         price: 3,    currency: 'vm' },
-    { id: 'founder',   name: 'FOUNDER\'S EDITION', desc: 'Day-one supporter exclusive.',          price: 8,    currency: 'vm' },
-    { id: 'invisible', name: 'INVISIBLE',        desc: 'No suit visible. The sprite is just Mark.', price: 10, currency: 'vm' },
-    { id: 'omnibunny', name: 'OMNI-BUNNY PJ',    desc: 'Onesie with bunny ears. Cursed.',         price: 12,   currency: 'vm' }
+    // ----- PREMIUM (SYRUP) -----
+    { id: 'field_kit',   name: 'FIELD BREAKFAST', desc: 'Full party HP+EP restore.',      price: 4,   currency: 'syrup' },
+    { id: 'time_chip',   name: 'TIME CHIP',       desc: 'Take an extra turn this round.', price: 6,   currency: 'syrup' }
   ],
 
   tutors: [
-    // ----- MARK -----
-    { id: 'tutor_thrust',       name: 'TEACH: THRUST',        desc: 'Quick low-EP physical for Mark.',   price: 2,  currency: 'vm' },
-    { id: 'tutor_double',       name: 'TEACH: DOUBLE STRIKE', desc: 'Two hits in one turn for Mark.',    price: 4,  currency: 'vm' },
-    { id: 'tutor_rage',         name: 'TEACH: RAGE',          desc: 'High-power physical for Mark.',     price: 5,  currency: 'vm' },
-    { id: 'tutor_sky',          name: 'TEACH: SKYBREAK',      desc: 'Orbital-drop finisher for Mark.',   price: 7,  currency: 'vm' },
-    { id: 'tutor_viltrum',      name: 'TEACH: VILTRUM STRIKE',desc: 'Cosmic-tagged big hit for Mark.',   price: 8,  currency: 'vm' },
-    { id: 'tutor_blood',        name: 'TEACH: BLOOD FIST',    desc: 'Brutal finisher for Mark.',         price: 12, currency: 'vm' },
-    { id: 'tutor_nova',         name: 'TEACH: NOVA BEAM',     desc: 'Cosmic ranged option for Mark.',    price: 6,  currency: 'vm' },
-    { id: 'tutor_emp',          name: 'TEACH: EMP GRID',      desc: 'Tech-tagged area lock for Mark.',   price: 5,  currency: 'vm' },
+    // ----- PANCAKE BUNNY -----
+    { id: 'tutor_overcharge',name: 'TEACH: OVERCHARGE',  desc: 'Heavy ELECTRIC for Pancake.',  price: 5,  currency: 'syrup' },
+    { id: 'tutor_thunderdome',name: 'TEACH: THUNDERDOME',desc: 'Massive ELECTRIC finisher.',   price: 9,  currency: 'syrup' },
+    { id: 'tutor_pancakeFlip',name: 'TEACH: PANCAKE FLIP',desc: 'Physical disruptor for Pancake.',price: 3, currency: 'syrup' },
 
-    // ----- EVE -----
-    { id: 'tutor_burst',        name: 'TEACH: BURST',         desc: 'Wide pink detonation for Eve.',     price: 5,  currency: 'vm' },
-    { id: 'tutor_pshield',      name: 'TEACH: PINK SHIELD',   desc: 'Full one-hit damage block.',        price: 4,  currency: 'vm' },
-    { id: 'tutor_novaburst',    name: 'TEACH: NOVA BURST',    desc: 'Bigger pink detonation for Eve.',   price: 6,  currency: 'vm' },
-    { id: 'tutor_rain',         name: 'TEACH: PINK RAIN',     desc: 'Cosmic shard-fall for Eve.',        price: 5,  currency: 'vm' },
-    { id: 'tutor_atomic',       name: 'TEACH: ATOMIC EDGE',   desc: 'Cosmic high-power for Eve.',        price: 8,  currency: 'vm' },
-    { id: 'tutor_heal',         name: 'TEACH: HEALING PULSE', desc: '60% HP restore move for Eve.',      price: 7,  currency: 'vm' },
-    { id: 'tutor_melt',         name: 'TEACH: MELTDOWN',      desc: 'BIO finisher for Eve.',             price: 12, currency: 'vm' }
+    // ----- WAFFLE RABBIT -----
+    { id: 'tutor_detonation',name: 'TEACH: DETONATION',  desc: 'Heavy BLAST for Waffle.',      price: 6,  currency: 'syrup' },
+    { id: 'tutor_waffleStorm',name: 'TEACH: WAFFLE STORM',desc: 'Forty flaming waffles. For Waffle.',price: 10, currency: 'syrup' },
+    { id: 'tutor_syrupSlick',name: 'TEACH: SYRUP SLICK', desc: 'Combo setup for Waffle.',      price: 4,  currency: 'syrup' },
+
+    // ----- BUTTA DAWG -----
+    { id: 'tutor_butterBath',name: 'TEACH: BUTTER BATH', desc: 'Party-wide heal for Butta.',   price: 7,  currency: 'syrup' },
+    { id: 'tutor_bigBark',    name: 'TEACH: BIG BARK',    desc: 'Heavy FOOD damage for Butta.',  price: 8, currency: 'syrup' },
+    { id: 'tutor_goodBoyAura',name: 'TEACH: GOOD BOY AURA',desc: 'Party DEF buff for Butta.',   price: 4,  currency: 'syrup' }
   ],
 
-  buffs: [
-    // ----- MARK -----
-    { id: 'm_hp_1',  name: 'MARK · HP +20',  desc: 'Permanent +20 max HP.',     price: 120, currency: 'gda', char: 'mark', stat: 'hp',  amt: 20 },
-    { id: 'm_hp_2',  name: 'MARK · HP +40',  desc: 'Permanent +40 max HP.',     price: 300, currency: 'gda', char: 'mark', stat: 'hp',  amt: 40 },
-    { id: 'm_ep_1',  name: 'MARK · EP +10',  desc: 'Permanent +10 max EP.',     price: 140, currency: 'gda', char: 'mark', stat: 'ep',  amt: 10 },
-    { id: 'm_atk_1', name: 'MARK · ATK +3',  desc: 'Permanent +3 ATK.',         price: 200, currency: 'gda', char: 'mark', stat: 'atk', amt: 3  },
-    { id: 'm_def_1', name: 'MARK · DEF +3',  desc: 'Permanent +3 DEF.',         price: 200, currency: 'gda', char: 'mark', stat: 'def', amt: 3  },
+  upgrades: [
+    // ----- PANCAKE BUNNY -----
+    { id: 'p_hp1',  name: 'PANCAKE · HP +20',  desc: 'Permanent +20 max HP.',  price: 120, currency: 'butter', char: 'pancake', stat: 'hp',  amt: 20 },
+    { id: 'p_hp2',  name: 'PANCAKE · HP +40',  desc: 'Permanent +40 max HP.',  price: 300, currency: 'butter', char: 'pancake', stat: 'hp',  amt: 40 },
+    { id: 'p_ep1',  name: 'PANCAKE · EP +10',  desc: 'Permanent +10 max EP.',  price: 140, currency: 'butter', char: 'pancake', stat: 'ep',  amt: 10 },
+    { id: 'p_atk1', name: 'PANCAKE · ATK +3',  desc: 'Permanent +3 ATK.',      price: 200, currency: 'butter', char: 'pancake', stat: 'atk', amt: 3  },
+    { id: 'p_def1', name: 'PANCAKE · DEF +3',  desc: 'Permanent +3 DEF.',      price: 200, currency: 'butter', char: 'pancake', stat: 'def', amt: 3  },
 
-    // ----- EVE -----
-    { id: 'e_hp_1',  name: 'EVE · HP +20',   desc: 'Permanent +20 max HP.',     price: 120, currency: 'gda', char: 'eve',  stat: 'hp',  amt: 20 },
-    { id: 'e_hp_2',  name: 'EVE · HP +40',   desc: 'Permanent +40 max HP.',     price: 300, currency: 'gda', char: 'eve',  stat: 'hp',  amt: 40 },
-    { id: 'e_ep_1',  name: 'EVE · EP +20',   desc: 'Permanent +20 max EP.',     price: 180, currency: 'gda', char: 'eve',  stat: 'ep',  amt: 20 },
-    { id: 'e_atk_1', name: 'EVE · ATK +3',   desc: 'Permanent +3 ATK.',         price: 200, currency: 'gda', char: 'eve',  stat: 'atk', amt: 3  },
-    { id: 'e_def_1', name: 'EVE · DEF +3',   desc: 'Permanent +3 DEF.',         price: 200, currency: 'gda', char: 'eve',  stat: 'def', amt: 3  },
+    // ----- WAFFLE RABBIT -----
+    { id: 'w_hp1',  name: 'WAFFLE · HP +20',   desc: 'Permanent +20 max HP.',  price: 120, currency: 'butter', char: 'waffle',  stat: 'hp',  amt: 20 },
+    { id: 'w_hp2',  name: 'WAFFLE · HP +40',   desc: 'Permanent +40 max HP.',  price: 300, currency: 'butter', char: 'waffle',  stat: 'hp',  amt: 40 },
+    { id: 'w_ep1',  name: 'WAFFLE · EP +15',   desc: 'Permanent +15 max EP.',  price: 160, currency: 'butter', char: 'waffle',  stat: 'ep',  amt: 15 },
+    { id: 'w_atk1', name: 'WAFFLE · ATK +4',   desc: 'Permanent +4 ATK.',      price: 230, currency: 'butter', char: 'waffle',  stat: 'atk', amt: 4  },
+    { id: 'w_def1', name: 'WAFFLE · DEF +3',   desc: 'Permanent +3 DEF.',      price: 200, currency: 'butter', char: 'waffle',  stat: 'def', amt: 3  },
 
-    // ----- GLOBAL -----
-    { id: 'g_crit',  name: 'GLOBAL · CRIT +5%',  desc: '+5% crit rate for the whole party.',  price: 6,  currency: 'vm', global: 'critRate', amt: 0.05 },
-    { id: 'g_crit2', name: 'GLOBAL · CRIT +10%', desc: 'Another +10% crit rate.',             price: 12, currency: 'vm', global: 'critRate', amt: 0.10 },
-    { id: 'g_xp_1',  name: 'GLOBAL · XP +25%',   desc: 'All XP gains +25%.',                  price: 8,  currency: 'vm', global: 'xpMult',   amt: 0.25 },
-    { id: 'g_xp_2',  name: 'GLOBAL · XP +50%',   desc: 'Stack another +50% XP.',              price: 16, currency: 'vm', global: 'xpMult',   amt: 0.50 },
-    { id: 'g_gda',   name: 'GLOBAL · GDA +25%',  desc: 'All GDA payouts +25%.',               price: 5,  currency: 'vm', global: 'gdaMult',  amt: 0.25 }
+    // ----- BUTTA DAWG -----
+    { id: 'b_hp1',  name: 'BUTTA · HP +25',    desc: 'Permanent +25 max HP.',  price: 130, currency: 'butter', char: 'butta',   stat: 'hp',  amt: 25 },
+    { id: 'b_hp2',  name: 'BUTTA · HP +50',    desc: 'Permanent +50 max HP.',  price: 320, currency: 'butter', char: 'butta',   stat: 'hp',  amt: 50 },
+    { id: 'b_ep1',  name: 'BUTTA · EP +20',    desc: 'Permanent +20 max EP.',  price: 180, currency: 'butter', char: 'butta',   stat: 'ep',  amt: 20 },
+    { id: 'b_def1', name: 'BUTTA · DEF +4',    desc: 'Permanent +4 DEF.',      price: 240, currency: 'butter', char: 'butta',   stat: 'def', amt: 4  },
+
+    // ----- GLOBAL (SYRUP) -----
+    { id: 'g_crit1', name: 'GLOBAL · CRIT +5%', desc: 'Party crit rate +5%.',     price: 6,  currency: 'syrup', global: 'critRate', amt: 0.05 },
+    { id: 'g_crit2', name: 'GLOBAL · CRIT +10%',desc: 'Another +10% crit rate.',  price: 12, currency: 'syrup', global: 'critRate', amt: 0.10 },
+    { id: 'g_xp1',   name: 'GLOBAL · XP +25%',  desc: 'All XP gains +25%.',       price: 8,  currency: 'syrup', global: 'xpMult',   amt: 0.25 },
+    { id: 'g_xp2',   name: 'GLOBAL · XP +50%',  desc: 'Stack another +50% XP.',   price: 16, currency: 'syrup', global: 'xpMult',   amt: 0.50 },
+    { id: 'g_butter',name: 'GLOBAL · BUTTER +25%',desc: 'All BUTTER payouts +25%.',price: 5,  currency: 'syrup', global: 'butterMult',amt: 0.25 }
+  ],
+
+  blueprints: [
+    // Rare late-game blueprints — unlock effects or persistent boons
+    { id: 'bp_bench_aura',  name: 'BENCH AURA',     desc: 'Bench fighters regen 6% HP/turn instead of 3%.',     price: 12, currency: 'syrup', global: 'benchRegen', amt: 0.03 },
+    { id: 'bp_starter_kit', name: 'STARTER KIT',    desc: 'Start every battle with one CRUMB in your bag.',     price: 8,  currency: 'syrup', perk: 'starter_crumb' },
+    { id: 'bp_third_seat',  name: 'THIRD SEAT',     desc: 'Allow a third party member in battle (3-fighter mode).',price: 20, currency: 'syrup', perk: 'three_fighter' },
+    { id: 'bp_crit_dmg',    name: 'CRIT DAMAGE +50%',desc: 'Critical hits now do 2.0x instead of 1.5x.',         price: 14, currency: 'syrup', global: 'critDmg', amt: 0.5 },
+    { id: 'bp_revive_cheap',name: 'CHEAP YOLK',     desc: 'PHOENIX YOLK costs 350 BUTTER instead of 500.',      price: 6,  currency: 'syrup', perk: 'phoenix_discount' }
   ]
 };
