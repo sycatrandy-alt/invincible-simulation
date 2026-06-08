@@ -202,15 +202,37 @@ const Battle = (() => {
   function playQueue(done) {
     inputLocked = true;
     hideAllCmds();
-    const step = () => {
-      if (dialogueQueue.length === 0) {
-        inputLocked = false;
-        if (done) done();
-        return;
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      inputLocked = false;
+      try { if (done) done(); }
+      catch (err) {
+        console.error('[battle] playQueue done callback threw:', err);
+        // Defensive: drop the player back to main commands so the UI never hangs
+        try { showCmd('main'); } catch (e) {}
       }
-      setDialogue(dialogueQueue.shift());
-      setTimeout(step, 1300);
     };
+    const step = () => {
+      try {
+        if (dialogueQueue.length === 0) return finish();
+        setDialogue(dialogueQueue.shift());
+        setTimeout(step, 1300);
+      } catch (err) {
+        console.error('[battle] playQueue step threw:', err);
+        finish();
+      }
+    };
+    // Hard watchdog — if the queue is still going after 2× expected duration, force-finish
+    const watchdogMs = Math.max(4000, dialogueQueue.length * 1300 * 2 + 1500);
+    setTimeout(() => {
+      if (!finished) {
+        console.warn('[battle] watchdog tripped — forcing queue finish');
+        dialogueQueue.length = 0;
+        finish();
+      }
+    }, watchdogMs);
     step();
   }
 
