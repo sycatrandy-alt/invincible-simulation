@@ -330,6 +330,72 @@ const ENEMIES = {
     ],
     xp: 850, butter: 750
   },
+  // ============ OUTSIDE ENEMIES ============
+  portal_cat: {
+    name: 'PORTAL CAT',
+    sprite: 'assets/portal_cat.png',
+    tag: 'METAL',
+    hp: 420, ep: 110, atk: 30, def: 18, spd: 16,
+    slowChance: 0.10,
+    passive: 'portal',          // → trigger dodge minigame on his hit; fail = stun
+    moves: ['blasterShot', 'whiskCut', 'microwaveRay'],
+    intro: 'PORTAL CAT phases in. "You won\'t even know where the hit came from."',
+    midHpDialogue: [
+      { at: 0.5, text: 'PORTAL CAT: "Hold still. (You can\'t.)"' },
+      { at: 0.2, text: 'PORTAL CAT opens THREE portals at once.' }
+    ],
+    xp: 420, butter: 380
+  },
+  alien_cat: {
+    name: 'ALIEN CAT',
+    sprite: 'assets/alien_cat.png',
+    tag: 'BIO',
+    hp: 480, ep: 100, atk: 28, def: 16, spd: 14,
+    slowChance: 0.12,
+    passive: 'poison',          // → 40% chance to apply POISON on hit (3 turns)
+    poisonChance: 0.40,
+    moves: ['rancid', 'curdle', 'swarmBite'],
+    intro: 'ALIEN CAT *kksskk-clicks* his antennae. "Earth-blood. Foul. Easy."',
+    midHpDialogue: [
+      { at: 0.5, text: 'ALIEN CAT spits a glob of green something. It MOVES on its own.' },
+      { at: 0.25, text: 'ALIEN CAT: "Your atmosphere is already a slow poison."' }
+    ],
+    xp: 460, butter: 410
+  },
+  old_cat: {
+    name: 'OLD CAT',
+    sprite: 'assets/old_cat.png',
+    tag: 'BREAKFAST',
+    hp: 660, ep: 140, atk: 36, def: 24, spd: 7,
+    slowChance: 0.30,
+    passive: 'aura_old',        // → applies OLD to player on battle start: -DEF each turn
+    canHeal: true, healAmount: 80, healThreshold: 0.4, healChance: 0.28,
+    healDialogue: 'OLD CAT: "I have outlasted three of you. I will outlast you." (His wounds close slowly.)',
+    moves: ['putItDown', 'cerealStorm', 'crumble', 'rancid'],
+    intro: 'OLD CAT does not look up. His eyes find you anyway. The air thickens.',
+    midHpDialogue: [
+      { at: 0.6, text: 'OLD CAT: "Your generation. Always rushing." (Your bones hurt.)' },
+      { at: 0.3, text: 'OLD CAT: "I knew your grandmother. She was BETTER."' }
+    ],
+    xp: 600, butter: 540
+  },
+  mauler_cats: {
+    name: 'MAULER CATS',
+    sprite: 'assets/mauler_cats.png',
+    tag: 'BREAKFAST',
+    hp: 820, ep: 160, atk: 40, def: 28, spd: 11,
+    slowChance: 0.15,
+    passive: 'recoil',          // → reflects 25% of incoming damage back to attacker
+    recoilPct: 0.25,
+    moves: ['putItDown', 'fridgeSlam', 'cerealStorm', 'swarmBite'],
+    intro: 'MAULER CATS: "WE BOTH HIT! BOTH OF US! AT ONCE!"',
+    midHpDialogue: [
+      { at: 0.55, text: 'TWIN A: "Are you hitting us? OW. WHY?"' },
+      { at: 0.25, text: 'TWIN B: "You are HITTING US. WHILE WE ARE HITTING YOU."' }
+    ],
+    xp: 720, butter: 660
+  },
+
   papa: {
     name: 'PAPA BUNNY',
     sprite: 'assets/papa.png',
@@ -377,7 +443,13 @@ const SCENES = [
   { region: 'kitchen', id: 'b1', num: 'B1', title: 'COFFEE POT (NORMAL+)',    desc: 'Hot. Sentient. Will only fight on NORMAL or higher.',            enemy: 'coffee',    recLvl: 12, minDifficulty: 'normal' },
   { region: 'kitchen', id: 'b2', num: 'B2', title: 'THE DISHWASHER (HARD+)', desc: 'Spinning death cycle. HARD and above only.',                     enemy: 'dishwasher',recLvl: 18, minDifficulty: 'hard',   boss: true },
   { region: 'kitchen', id: 'b3', num: 'B3', title: 'BLACK FRIDGE (MASTER+)', desc: 'A fridge that learned. MASTER difficulty only.',                 enemy: 'blackfridge',recLvl: 22, minDifficulty: 'master', boss: true },
-  { region: 'kitchen', id: 'b4', num: 'B4', title: 'PAPA BUNNY (IMPOSSIBLE)', desc: 'You weren\'t supposed to make him come downstairs.',            enemy: 'papa',      recLvl: 26, minDifficulty: 'impossible', boss: true }
+  { region: 'kitchen', id: 'b4', num: 'B4', title: 'PAPA BUNNY (IMPOSSIBLE)', desc: 'You weren\'t supposed to make him come downstairs.',            enemy: 'papa',      recLvl: 26, minDifficulty: 'impossible', boss: true },
+
+  // ============ OUTSIDE (unlocks after k7 Mama on any difficulty) ============
+  { region: 'outside', id: 'o1', num: '01', title: 'PORTAL CAT',  desc: 'He hits, then BLINKS. Dodge his portal or get stunned.',          enemy: 'portal_cat', recLvl: 14 },
+  { region: 'outside', id: 'o2', num: '02', title: 'ALIEN CAT',   desc: 'Antennae twitching. His hits POISON you.',                        enemy: 'alien_cat',  recLvl: 16 },
+  { region: 'outside', id: 'o3', num: '03', title: 'OLD CAT',     desc: 'Mini-boss. Looks at you and your DEF starts CRUMBLING.',           enemy: 'old_cat',    recLvl: 18, boss: true },
+  { region: 'outside', id: 'o4', num: '04', title: 'MAULER CATS', desc: 'Twin brawlers. Hit them and they HIT BACK on every strike.',       enemy: 'mauler_cats',recLvl: 20, boss: true }
 ];
 
 const SHOP_DATA = {

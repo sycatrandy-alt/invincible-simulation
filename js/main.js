@@ -1,7 +1,7 @@
 // INVINCIBLE: SIMULATION — main shell, menus, save state
 
 const Game = (() => {
-  const SAVE_KEY = 'pancake_bunny_rpg_save_v2';
+  const SAVE_KEY = 'pancake_bunny_rpg_save_v3';
 
   const defaultState = () => ({
     butter: 100,
@@ -27,6 +27,7 @@ const Game = (() => {
     currentRegion: 'kitchen',
     difficulty: 'easy',
     unlockedDifficulties: ['easy'],                       // 'easy','normal','hard','master','impossible'
+    storyBeats: {},
     settings: { speed: 2, text: 30, blood: 'comic', shake: true, vol: 70 }
   });
 
@@ -138,6 +139,55 @@ const Game = (() => {
   };
 })();
 
+// ============ STORY ============
+const STORY = {
+  intro: {
+    chapter: 'CHAPTER 0',
+    title: 'BREAKFAST AT EIGHT',
+    body: `The microwave had been threatening for weeks. The toast came back wrong. Spoiled milk in the fridge \nstarted answering when you talked to it.
+
+Three of you lived here. <em>Pancake Bunny</em> — the loud one, fingers always sparking. <em>Waffle Rabbit</em> — twitchy, smelled like a fuse. \nAnd <em>Butta Dawg</em>, who patched everyone up.
+
+Today the kitchen revolted. <strong>You eat first, or you get eaten.</strong>`
+  },
+  kitchen_done: {
+    chapter: 'INTERLUDE',
+    title: 'THE BACK DOOR',
+    body: `Mama Bunny is down. The kitchen quiet again. Coffee Pot whistles a victory chord, then is silent.
+
+You hear a sound from the <em>backyard</em>. Glass cracking? A portal humming? A cat sneezing?
+
+The screen door swings open on its own.
+
+You step <strong>OUTSIDE</strong>.`
+  },
+  outside_done: {
+    chapter: 'EPILOGUE',
+    title: 'A LITTLE PEACE',
+    body: `The yard is yours. Mauler Cats high-fived you both before passing out. Old Cat went back to his nap.
+
+Tomorrow the toaster will be fine. The fridge will hum a normal hum. The waffles will be just waffles.
+
+For now: <strong>breakfast.</strong>`
+  }
+};
+
+function showStory(beatKey, onContinue) {
+  const beat = STORY[beatKey];
+  if (!beat) { if (onContinue) onContinue(); return; }
+  if (Game.state.storyBeats[beatKey]) { if (onContinue) onContinue(); return; }
+  Game.state.storyBeats[beatKey] = true;
+  Game.save();
+  document.getElementById('story-chapter').textContent = beat.chapter;
+  document.getElementById('story-title').textContent = beat.title;
+  document.getElementById('story-body').innerHTML = beat.body;
+  Router.go('story');
+  document.getElementById('story-continue').onclick = () => {
+    if (onContinue) onContinue();
+    else Router.go('menu');
+  };
+}
+
 // ============ ROUTER / UI ============
 
 const Router = (() => {
@@ -190,15 +240,27 @@ function renderScenes() {
   });
   list.appendChild(diffBar);
 
-  // Region tab bar — single region for now
+  // Region tab bar — OUTSIDE unlocks after beating Mama Bunny (k7) on any difficulty
+  const outsideUnlocked = !!Object.keys(Game.state.scenesDone).find(k => k.endsWith(':k7'));
   const tabs = document.createElement('div');
   tabs.className = 'region-tabs';
-  tabs.innerHTML = `<button class="region-tab active" data-region="kitchen">🍳 KITCHEN</button>`;
+  const cur = Game.state.currentRegion;
+  tabs.innerHTML = `
+    <button class="region-tab ${cur === 'kitchen' ? 'active' : ''}" data-region="kitchen">🍳 KITCHEN</button>
+    <button class="region-tab ${cur === 'outside' ? 'active' : ''} ${outsideUnlocked ? '' : 'locked'}" data-region="outside">🌳 OUTSIDE ${outsideUnlocked ? '' : '· LOCKED'}</button>
+  `;
+  tabs.querySelectorAll('.region-tab').forEach(t => {
+    t.addEventListener('click', () => {
+      if (t.classList.contains('locked')) {
+        flashDialogue('Defeat MAMA BUNNY to unlock OUTSIDE.');
+        return;
+      }
+      Game.state.currentRegion = t.dataset.region;
+      Game.save();
+      renderScenes();
+    });
+  });
   list.appendChild(tabs);
-  if (Game.state.currentRegion !== 'kitchen') {
-    Game.state.currentRegion = 'kitchen';
-    Game.save();
-  }
 
   // Scene grid for current region (difficulty-aware)
   const grid = document.createElement('div');
@@ -374,7 +436,17 @@ function showVictory(result, sc) {
     text.innerHTML = `Regroup and try again.${gainLine}<br>TOTAL BUTTER: ${Game.state.butter}`;
   }
   Game.updateHud();
-  document.getElementById('victory-continue').onclick = () => Router.go('play');
+  document.getElementById('victory-continue').onclick = () => {
+    // After first Mama win, show the OUTSIDE-unlock story
+    if (result.win && sc.id === 'k7' && !Game.state.storyBeats.kitchen_done) {
+      return showStory('kitchen_done', () => Router.go('play'));
+    }
+    // After first Mauler Cats win (outside finale), show epilogue
+    if (result.win && sc.id === 'o4' && !Game.state.storyBeats.outside_done) {
+      return showStory('outside_done', () => Router.go('play'));
+    }
+    Router.go('play');
+  };
 }
 
 // ============ SHOP ============
@@ -515,7 +587,11 @@ window.addEventListener('DOMContentLoaded', () => {
     booted = true;
     document.removeEventListener('keydown', advance);
     boot.removeEventListener('click', advance);
-    Router.go('menu');
+    if (!Game.state.storyBeats.intro) {
+      showStory('intro', () => Router.go('menu'));
+    } else {
+      Router.go('menu');
+    }
   };
   document.addEventListener('keydown', advance);
   boot.addEventListener('click', advance);

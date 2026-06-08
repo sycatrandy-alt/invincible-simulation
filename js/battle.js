@@ -33,10 +33,16 @@ const Battle = (() => {
       onEnd,
       buffs: { atk: 0, def: 0, revive: false, phoenix: false, damageCharge: false, dodge: false },
       debuffs: { enemyAtk: 0 },
+      // Status effects on the active fighter
+      status: { stun: 0, poison: 0, poisonDmg: 0, old: 0 },
       phaseIdx: 0,
       firedDialogue: new Set(),
       scripted: !!enemyDef.scripted
     };
+    // Apply enemy's on-enter passive (e.g., OLD CAT aura)
+    if (enemyDef.passive === 'aura_old') {
+      state.status.old = 99; // permanent for this battle
+    }
     // Defer audio start so the battle UI paints first — feels instant
     requestAnimationFrame(() => playBGM(enemyDef));
     const pb = document.getElementById('phase-banner');
@@ -62,6 +68,9 @@ const Battle = (() => {
     else queueDialogue(`A wild ${enemyDef.name} blocks your path!`);
     if (multiSpawn && state.party.length > 1) {
       queueDialogue(`${active().char.name} and ${bench().char.name} BOTH stay out for the brawl!`);
+    }
+    if (state.status.old > 0) {
+      queueDialogue(`OLD AURA: ${active().char.name}'s bones ache. DEF will drop each turn.`);
     }
     playQueue(() => showCmd('main'));
   }
@@ -252,20 +261,20 @@ const Battle = (() => {
       color: '#ff2bd6', label: '↻ FLIP', verb: 'flips', perfectVerb: 'PERFECT FLIPS'
     },
     pancake: {
-      name: 'SHOCK', stat: 'atk', vertical: false,
-      reductionBase: 0.08, reductionScale: 0.006, reductionCap: 0.75,
-      initSpeed: 0.025, speedStep: 0.007, speedCap: 0.095, // faster start
-      initWidth: 20, widthStep: 1.3, widthMin: 7,
+      name: 'SHOCK FLIP', stat: 'atk', vertical: false,
+      reductionBase: 0.09, reductionScale: 0.006, reductionCap: 0.80,
+      initSpeed: 0.024, speedStep: 0.006, speedCap: 0.090,
+      initWidth: 22, widthStep: 1.2, widthMin: 8,
       chainCap: 8, oneShot: false,
-      color: '#00e5ff', label: '⚡ SHOCK', verb: 'shocks', perfectVerb: 'CIRCUITS LANDED'
+      color: '#00e5ff', label: '⚡ SHOCK FLIP', verb: 'shock-flips', perfectVerb: 'PERFECT CIRCUITS'
     },
     waffle: {
-      name: 'BLAST', stat: 'atk', vertical: true,
-      reductionBase: 0.14, reductionScale: 0.008, reductionCap: 0.75,
-      initSpeed: 0.013, speedStep: 0.004, speedCap: 0.055, // slower but bigger hit
-      initWidth: 26, widthStep: 2.0, widthMin: 9,
+      name: 'BLAST FLIP', stat: 'atk', vertical: true,
+      reductionBase: 0.15, reductionScale: 0.009, reductionCap: 0.80,
+      initSpeed: 0.014, speedStep: 0.004, speedCap: 0.058,
+      initWidth: 28, widthStep: 2.0, widthMin: 10,
       chainCap: 5, oneShot: false,
-      color: '#ff8a3a', label: '💥 BLAST', verb: 'blasts', perfectVerb: 'CHARGES PLACED'
+      color: '#ff8a3a', label: '💥 BLAST FLIP', verb: 'blast-flips', perfectVerb: 'PERFECT CHARGES'
     }
   };
 
@@ -462,6 +471,14 @@ const Battle = (() => {
     hideAllCmds();
     $('#cmd-back').classList.toggle('hidden', which === 'main');
     if (which === 'main') {
+      // STUN check — skip the player turn if stunned
+      if (state.status && state.status.stun > 0) {
+        state.status.stun--;
+        dialogueQueue = [`${active().char.name} is STUNNED and can't move!`];
+        renderAll();
+        playQueue(() => { afterPlayerTurn(); enemyTurn(); });
+        return;
+      }
       $('#cmd-main').classList.remove('hidden');
       setDialogue(`What will ${active().char.name} do?`);
       const swapBtn = $('#cmd-main [data-cmd="swap"]');
@@ -469,11 +486,11 @@ const Battle = (() => {
         const benchOK = state.party.length > 1 && bench().hp > 0;
         swapBtn.disabled = !benchOK;
       }
-      // FLIP button shows the active char's minigame label
       const flipBtn = document.getElementById('cmd-flip-btn');
       if (flipBtn && MINIGAME_CFG[active().char.id]) {
         flipBtn.textContent = MINIGAME_CFG[active().char.id].label;
       }
+      renderStatusBadges();
     } else {
       $('#cmd-' + which).classList.remove('hidden');
       if (which === 'moves') renderMoves();
@@ -639,6 +656,17 @@ const Battle = (() => {
     if (damageMul > 1) queueDialogue('DAMAGE CHARGE doubled the hit!');
     if (hitCount > 1) queueDialogue(`Two hits landed!`);
     if (m.power > 0) queueDialogue(`Dealt ${totalDmg} damage.`);
+
+    // RECOIL passive — enemy reflects part of the incoming damage
+    if (m.power > 0 && totalDmg > 0 && state.enemy.char.passive === 'recoil') {
+      const recoilPct = state.enemy.char.recoilPct || 0.25;
+      const recoil = Math.floor(totalDmg * recoilPct);
+      if (recoil > 0) {
+        a.hp = Math.max(0, a.hp - recoil);
+        flashHit('player');
+        queueDialogue(`${state.enemy.char.name} hit back! ${a.char.name} took ${recoil} recoil damage.`);
+      }
+    }
 
     benchPassiveAttack();
     renderAll();
@@ -839,7 +867,7 @@ const Battle = (() => {
     if (state.buffs.atk > 0) state.buffs.atk--;
     if (state.buffs.def > 0) state.buffs.def--;
     if (state.debuffs.enemyAtk > 0) state.debuffs.enemyAtk--;
-    // Bench regen (slower if also active-attacking in multi-spawn)
+    tickStatuses();
     if (state.party.length > 1) {
       const b = bench();
       if (b.hp > 0) {
@@ -873,6 +901,80 @@ const Battle = (() => {
     flashHit('enemy');
     queueDialogue(`${b.char.name} (bench) also lands ${m.name} → ${dmg} dmg.`);
     return dmg;
+  }
+
+  function renderStatusBadges() {
+    const el = document.getElementById('status-badges');
+    if (!el) return;
+    const parts = [];
+    if (state.status.stun > 0)   parts.push(`<span class="status-pip stun">STUN ${state.status.stun}</span>`);
+    if (state.status.poison > 0) parts.push(`<span class="status-pip poison">POISON ${state.status.poison}</span>`);
+    if (state.status.old > 0)    parts.push(`<span class="status-pip old">OLD</span>`);
+    el.innerHTML = parts.join(' ');
+  }
+
+  // PORTAL DODGE — fires from the enemy turn callback when portal-cat lands a hit
+  function runPortalDodge(done) {
+    const ov = document.getElementById('dodge-overlay');
+    const btn = document.getElementById('dodge-btn');
+    if (!ov || !btn) { if (done) done(true); return; }
+    ov.classList.remove('hidden');
+    const start = Date.now();
+    const duration = 1300;
+    let resolved = false;
+    const finish = (didDodge) => {
+      if (resolved) return;
+      resolved = true;
+      ov.classList.add('hidden');
+      btn.onclick = null;
+      document.removeEventListener('keydown', keyHandler);
+      if (done) done(didDodge);
+    };
+    btn.onclick = () => finish(true);
+    const keyHandler = (e) => {
+      if (e.code === 'Space' || e.key === ' ') { e.preventDefault(); finish(true); }
+    };
+    document.addEventListener('keydown', keyHandler);
+    // Animate the target button moving randomly
+    const startTime = Date.now();
+    const reposition = () => {
+      if (resolved) return;
+      const t = Date.now() - startTime;
+      if (t >= duration) return finish(false);
+      const x = 10 + Math.random() * 80;
+      const y = 20 + Math.random() * 60;
+      btn.style.left = x + '%';
+      btn.style.top  = y + '%';
+      setTimeout(reposition, 220);
+    };
+    reposition();
+    // hard backstop
+    setTimeout(() => finish(false), duration + 100);
+  }
+
+  function tickStatuses() {
+    const a = active();
+    if (!a) return;
+    // POISON: tick damage per turn
+    if (state.status.poison > 0) {
+      const tick = state.status.poisonDmg || 8;
+      a.hp = Math.max(0, a.hp - tick);
+      queueDialogue(`POISON ticks ${a.char.name} for ${tick} HP.`);
+      state.status.poison--;
+      if (state.status.poison <= 0) {
+        state.status.poisonDmg = 0;
+        queueDialogue(`POISON wore off.`);
+      }
+    }
+    // OLD: DEF down each turn (until floored at 1)
+    if (state.status.old > 0) {
+      const drop = 2;
+      if (a.def > 1) {
+        a.def = Math.max(1, a.def - drop);
+        queueDialogue(`OLD AURA: ${a.char.name}'s DEF dropped by ${drop}.`);
+      }
+    }
+    // STUN tick is handled at start of player turn (skip)
   }
 
   function enemyTurn() {
@@ -932,6 +1034,19 @@ const Battle = (() => {
       if (calc.tagMult > 1.1) queueDialogue("It's super effective!");
       if (calc.tagMult < 0.9) queueDialogue("It's not very effective...");
       if (m.power > 0) queueDialogue(`${a.char.name} took ${dmg} damage.`);
+
+      // ENEMY PASSIVES — trigger on a landed hit
+      if (m.power > 0 && dmg > 0 && e.char.passive) {
+        if (e.char.passive === 'poison' && Math.random() < (e.char.poisonChance || 0.4)) {
+          state.status.poison = 3;
+          state.status.poisonDmg = Math.max(6, Math.floor(e.atk * 0.20));
+          queueDialogue(`${a.char.name} was POISONED! (${state.status.poison} turns)`);
+        }
+        if (e.char.passive === 'portal') {
+          // Schedule the portal-dodge minigame BETWEEN now and the player's next move
+          state.pendingPortalDodge = true;
+        }
+      }
     }
 
     renderAll();
@@ -967,6 +1082,26 @@ const Battle = (() => {
           return;
         }
         return lose();
+      }
+      // PORTAL DODGE — fires before player can act
+      if (state.pendingPortalDodge) {
+        state.pendingPortalDodge = false;
+        runPortalDodge((dodged) => {
+          if (dodged) {
+            dialogueQueue = [`${a.char.name} dodged the portal!`];
+            renderAll();
+            playQueue(() => showCmd('main'));
+          } else {
+            state.status.stun = 1;
+            dialogueQueue = [
+              `${a.char.name} stepped THROUGH the portal!`,
+              `STUNNED — skip next turn.`
+            ];
+            renderAll();
+            playQueue(() => showCmd('main'));
+          }
+        });
+        return;
       }
       showCmd('main');
     });
