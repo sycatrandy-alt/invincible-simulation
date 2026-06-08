@@ -658,6 +658,7 @@ const Battle = (() => {
     if (m.power > 0) queueDialogue(`Dealt ${totalDmg} damage.`);
 
     // RECOIL passive — enemy reflects part of the incoming damage
+    let recoilDeath = false;
     if (m.power > 0 && totalDmg > 0 && state.enemy.char.passive === 'recoil') {
       const recoilPct = state.enemy.char.recoilPct || 0.25;
       const recoil = Math.floor(totalDmg * recoilPct);
@@ -665,6 +666,7 @@ const Battle = (() => {
         a.hp = Math.max(0, a.hp - recoil);
         flashHit('player');
         queueDialogue(`${state.enemy.char.name} hit back! ${a.char.name} took ${recoil} recoil damage.`);
+        if (a.hp <= 0) recoilDeath = true;
       }
     }
 
@@ -673,6 +675,29 @@ const Battle = (() => {
     checkPhaseShift();
     playQueue(() => {
       if (state.enemy.hp <= 0) return win();
+      // Handle recoil-induced faint right away — auto-swap / revive / lose
+      if (recoilDeath && a.hp <= 0) {
+        if (state.buffs.phoenix) {
+          state.buffs.phoenix = false; a.hp = Math.floor(a.maxHP * 0.80);
+          dialogueQueue = ['PHOENIX YOLK cracks!', `${a.char.name} rises at 80% HP.`];
+          renderAll();
+          return playQueue(() => { afterPlayerTurn(); enemyTurn(); });
+        }
+        if (state.buffs.revive) {
+          state.buffs.revive = false; a.hp = Math.floor(a.maxHP * 0.5);
+          dialogueQueue = ['REVIVE triggered!', `${a.char.name} is back on their feet.`];
+          renderAll();
+          return playQueue(() => { afterPlayerTurn(); enemyTurn(); });
+        }
+        if (state.party.length > 1 && bench().hp > 0) {
+          const fallen = a.char.name, incoming = bench().char.name;
+          state.activeIdx = 1 - state.activeIdx;
+          dialogueQueue = [`${fallen} fell from recoil!`, `${incoming} tags in!`];
+          renderAll();
+          return playQueue(() => { afterPlayerTurn(); enemyTurn(); });
+        }
+        return lose();
+      }
       afterPlayerTurn();
       enemyTurn();
     });
@@ -965,6 +990,7 @@ const Battle = (() => {
         state.status.poisonDmg = 0;
         queueDialogue(`POISON wore off.`);
       }
+      renderStatusBadges();
     }
     // OLD: DEF down each turn (until floored at 1)
     if (state.status.old > 0) {
@@ -973,6 +999,7 @@ const Battle = (() => {
         a.def = Math.max(1, a.def - drop);
         queueDialogue(`OLD AURA: ${a.char.name}'s DEF dropped by ${drop}.`);
       }
+      renderStatusBadges();
     }
     // STUN tick is handled at start of player turn (skip)
   }

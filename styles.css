@@ -1210,6 +1210,8 @@ button { font-family: inherit; }
 }
 .dodge-btn {
   position: absolute;
+  /* default position so the button doesn't flash at top-left before the first JS reposition */
+  left: 50%; top: 55%;
   background: linear-gradient(135deg, var(--magenta), #9a6cff);
   border: 3px solid #fff;
   color: #fff;

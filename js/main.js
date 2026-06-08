@@ -240,8 +240,8 @@ function renderScenes() {
   });
   list.appendChild(diffBar);
 
-  // Region tab bar — OUTSIDE unlocks after beating Mama Bunny (k7) on any difficulty
-  const outsideUnlocked = !!Object.keys(Game.state.scenesDone).find(k => k.endsWith(':k7'));
+  // Region tab bar — OUTSIDE unlocks per-difficulty once K7 (Mama Bunny) is cleared on it
+  const outsideUnlocked = Game.isSceneDone('k7');
   const tabs = document.createElement('div');
   tabs.className = 'region-tabs';
   const cur = Game.state.currentRegion;
