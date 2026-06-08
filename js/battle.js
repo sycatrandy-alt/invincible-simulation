@@ -1030,10 +1030,23 @@ const Battle = (() => {
       return;
     }
 
-    const usable = e.moves.filter(mid => e.ep >= MOVES[mid].ep);
-    const mid = usable.length ? usable[Math.floor(Math.random() * usable.length)] : 'punch';
-    const m = MOVES[mid];
-    e.ep = Math.max(0, e.ep - m.ep);
+    const usable = e.moves.filter(mid => MOVES[mid] && e.ep >= MOVES[mid].ep);
+    // Fallback: pick the cheapest move the enemy knows (0-EP if any), then a global free move
+    let mid;
+    if (usable.length) {
+      mid = usable[Math.floor(Math.random() * usable.length)];
+    } else {
+      // Cheapest among the enemy's own moves regardless of EP
+      const ranked = e.moves
+        .map(id => ({ id, m: MOVES[id] }))
+        .filter(x => x.m)
+        .sort((a, b) => a.m.ep - b.m.ep);
+      mid = (ranked[0] && ranked[0].id) || 'crumble'; // crumble exists, 0 EP
+    }
+    const m = MOVES[mid] || MOVES.crumble;
+    e.ep = Math.max(0, e.ep - (m.ep || 0));
+    // Small EP regen after use so prolonged fights keep the enemy active
+    e.ep = Math.min(e.maxEP, e.ep + 3);
 
     const enemyAtk = e.atk - (state.debuffs.enemyAtk > 0 ? Math.floor(e.atk * 0.25) : 0);
     const playerBuff = applyBuffs(a);
