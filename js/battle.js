@@ -244,20 +244,29 @@ const Battle = (() => {
   // ============ FLIP MINIGAME ============
   let flipState = null;
   function startFlip() {
-    if (inputLocked) return;
-    const a = active();
+    if (inputLocked || flipState) return;
+    // Pre-load cumulative reduction from earlier flip sessions in this battle
+    const prevReduction = (state.enemy._baseDef && state.enemy._baseDef > 0)
+      ? 1 - (state.enemy.def / state.enemy._baseDef)
+      : 0;
     flipState = {
       chain: 0,
-      defReductionPct: 0, // 0..1 cumulative reduction applied to enemy.def
+      defReductionPct: Math.max(0, Math.min(0.80, prevReduction)),
       markerPos: 0,
       direction: 1,
-      speed: 0.018,       // % per frame
-      zoneCenter: 50,     // %
-      zoneWidth: 22,      // %
-      raf: null
+      speed: 0.018,
+      zoneCenter: 50,
+      zoneWidth: 22,
+      raf: null,
+      lastTapAt: 0
     };
+    // Drop focus off the FLIP menu button so SPACE doesn't re-click it
+    if (document.activeElement && document.activeElement.blur) {
+      document.activeElement.blur();
+    }
     document.getElementById('player-sprite').classList.add('flipping');
     $('#flip-overlay').classList.remove('hidden');
+    $('#flip-overlay').classList.remove('success-flash', 'fail-flash');
     $('#flip-chain').textContent = '0';
     $('#flip-def').textContent = currentEnemyDefPctText();
     hideAllCmds();
@@ -288,6 +297,10 @@ const Battle = (() => {
 
   function tapFlip() {
     if (!flipState) return;
+    // 220ms tap cooldown — prevents space-mashing through the chain
+    const now = Date.now();
+    if (now - flipState.lastTapAt < 220) return;
+    flipState.lastTapAt = now;
     const distFromCenter = Math.abs(flipState.markerPos - flipState.zoneCenter);
     const half = flipState.zoneWidth / 2;
     if (distFromCenter <= half) {
