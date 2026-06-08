@@ -991,6 +991,31 @@ button { font-family: inherit; }
 #flip-cash { margin: 6px 4px; min-width: 140px; border-color: var(--green); color: var(--green); }
 #flip-cash:hover { background: rgba(52,255,154,0.2); }
 
+/* Dynamic accent color from JS via --mg-color */
+.flip-overlay { border-color: var(--mg-color, var(--magenta)); }
+.flip-title   { color: var(--mg-color, var(--magenta)); text-shadow: 0 0 12px var(--mg-color, var(--magenta)); }
+.flip-marker  { box-shadow: 0 0 12px #fff, 0 0 24px var(--mg-color, var(--magenta)); }
+
+/* Vertical mode for Waffle's FUSE BLAST */
+.flip-overlay.mg-vertical .flip-track {
+  height: 220px;
+  width: 36px;
+  margin: 14px auto;
+}
+.flip-overlay.mg-vertical .flip-marker {
+  top: 0; left: -4px; right: -4px;
+  width: auto; height: 4px;
+  background: #fff;
+}
+.flip-overlay.mg-vertical .flip-zone {
+  top: 0; bottom: auto;
+  width: 100%; height: 22%;
+  border-top: 2px solid var(--green);
+  border-bottom: 2px solid var(--green);
+  border-left: none; border-right: none;
+  background: linear-gradient(90deg, rgba(255,138,58,0.4), rgba(255,138,58,0.15));
+}
+
 .flip-overlay.success-flash { animation: flipSuccess 0.35s ease; }
 .flip-overlay.fail-flash { animation: flipFail 0.35s ease; }
 @keyframes flipSuccess { 0%,100% { border-color: var(--magenta); } 50% { border-color: var(--green); box-shadow: 0 0 64px var(--green); } }

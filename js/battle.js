@@ -241,22 +241,54 @@ const Battle = (() => {
     $('#cmd-back').classList.add('hidden');
   }
 
-  // ============ FLIP MINIGAME ============
+  // ============ MINIGAMES (per character) ============
+  const MINIGAME_CFG = {
+    butta: {
+      name: 'FLIP', stat: 'def', vertical: false,
+      reductionBase: 0.07, reductionScale: 0.005, reductionCap: 0.80,
+      initSpeed: 0.018, speedStep: 0.005, speedCap: 0.080,
+      initWidth: 22, widthStep: 1.5, widthMin: 8,
+      chainCap: 10, oneShot: true,
+      color: '#ff2bd6', label: '↻ FLIP', verb: 'flips', perfectVerb: 'PERFECT FLIPS'
+    },
+    pancake: {
+      name: 'SHOCK', stat: 'atk', vertical: false,
+      reductionBase: 0.08, reductionScale: 0.006, reductionCap: 0.75,
+      initSpeed: 0.025, speedStep: 0.007, speedCap: 0.095, // faster start
+      initWidth: 20, widthStep: 1.3, widthMin: 7,
+      chainCap: 8, oneShot: false,
+      color: '#00e5ff', label: '⚡ SHOCK', verb: 'shocks', perfectVerb: 'CIRCUITS LANDED'
+    },
+    waffle: {
+      name: 'BLAST', stat: 'atk', vertical: true,
+      reductionBase: 0.14, reductionScale: 0.008, reductionCap: 0.75,
+      initSpeed: 0.013, speedStep: 0.004, speedCap: 0.055, // slower but bigger hit
+      initWidth: 26, widthStep: 2.0, widthMin: 9,
+      chainCap: 5, oneShot: false,
+      color: '#ff8a3a', label: '💥 BLAST', verb: 'blasts', perfectVerb: 'CHARGES PLACED'
+    }
+  };
+
   let flipState = null;
+  function activeCfg() { return MINIGAME_CFG[active().char.id] || MINIGAME_CFG.butta; }
   function startFlip() {
     if (inputLocked || flipState) return;
-    // Pre-load cumulative reduction from earlier flip sessions in this battle
-    const prevReduction = (state.enemy._baseDef && state.enemy._baseDef > 0)
-      ? 1 - (state.enemy.def / state.enemy._baseDef)
+    const cfg = activeCfg();
+    // Pre-load cumulative reduction from prior sessions in this battle (per-stat)
+    const baseKey = cfg.stat === 'def' ? '_baseDef' : '_baseAtk';
+    const curStat = cfg.stat === 'def' ? state.enemy.def : state.enemy.atk;
+    const prevReduction = (state.enemy[baseKey] && state.enemy[baseKey] > 0)
+      ? 1 - (curStat / state.enemy[baseKey])
       : 0;
     flipState = {
+      cfg,
       chain: 0,
-      defReductionPct: Math.max(0, Math.min(0.80, prevReduction)),
+      reductionPct: Math.max(0, Math.min(cfg.reductionCap, prevReduction)),
       markerPos: 0,
       direction: 1,
-      speed: 0.018,
+      speed: cfg.initSpeed,
       zoneCenter: 50,
-      zoneWidth: 22,
+      zoneWidth: cfg.initWidth,
       raf: null,
       lastTapAt: 0
     };
@@ -266,10 +298,15 @@ const Battle = (() => {
     const sprite = document.getElementById('player-sprite');
     sprite.style.setProperty('--flip-duration', '0.65s');
     sprite.classList.add('flipping');
-    $('#flip-overlay').classList.remove('hidden');
-    $('#flip-overlay').classList.remove('success-flash', 'fail-flash');
+    const ov = $('#flip-overlay');
+    ov.classList.remove('hidden');
+    ov.classList.remove('success-flash', 'fail-flash');
+    ov.classList.toggle('mg-vertical', !!cfg.vertical);
+    ov.style.setProperty('--mg-color', cfg.color);
+    $('#flip-title-name').textContent = cfg.name + ' MINIGAME';
+    $('#flip-stat-label').textContent = 'ENEMY ' + cfg.stat.toUpperCase();
     $('#flip-chain').textContent = '0';
-    $('#flip-def').textContent = currentEnemyDefPctText();
+    $('#flip-def').textContent = currentEnemyStatPctText();
     hideAllCmds();
     inputLocked = true;
     updateFlipUI();
@@ -283,7 +320,14 @@ const Battle = (() => {
       flipState.markerPos += flipState.direction * flipState.speed * 16;
       if (flipState.markerPos >= 100) { flipState.markerPos = 100; flipState.direction = -1; }
       else if (flipState.markerPos <= 0) { flipState.markerPos = 0; flipState.direction = 1; }
-      $('#flip-marker').style.left = flipState.markerPos + '%';
+      const marker = $('#flip-marker');
+      if (flipState.cfg.vertical) {
+        marker.style.top = flipState.markerPos + '%';
+        marker.style.left = '';
+      } else {
+        marker.style.left = flipState.markerPos + '%';
+        marker.style.top = '';
+      }
       flipState.raf = requestAnimationFrame(tick);
     };
     tick();
@@ -291,47 +335,55 @@ const Battle = (() => {
 
   function updateFlipUI() {
     const zone = $('#flip-zone');
-    const left = flipState.zoneCenter - flipState.zoneWidth / 2;
-    zone.style.left = left + '%';
-    zone.style.width = flipState.zoneWidth + '%';
+    const cfg = flipState.cfg;
+    const startPos = flipState.zoneCenter - flipState.zoneWidth / 2;
+    if (cfg.vertical) {
+      zone.style.left = '0';
+      zone.style.right = '0';
+      zone.style.width = '';
+      zone.style.top = startPos + '%';
+      zone.style.height = flipState.zoneWidth + '%';
+    } else {
+      zone.style.left = startPos + '%';
+      zone.style.width = flipState.zoneWidth + '%';
+      zone.style.top = '';
+      zone.style.height = '';
+      zone.style.right = '';
+    }
   }
 
   function tapFlip() {
     if (!flipState) return;
-    // 220ms tap cooldown — prevents space-mashing through the chain
     const now = Date.now();
     if (now - flipState.lastTapAt < 220) return;
     flipState.lastTapAt = now;
+    const cfg = flipState.cfg;
     const distFromCenter = Math.abs(flipState.markerPos - flipState.zoneCenter);
     const half = flipState.zoneWidth / 2;
     if (distFromCenter <= half) {
-      // HIT
       flipState.chain++;
-      // DEF reduction: more per hit at higher chains, capped at 80%
-      const reductionThisHit = 0.07 + Math.min(0.05, flipState.chain * 0.005);
-      flipState.defReductionPct = Math.min(0.80, flipState.defReductionPct + reductionThisHit);
-      // Re-center & speed up
+      const reductionThisHit = cfg.reductionBase + Math.min(cfg.reductionBase * 0.5, flipState.chain * cfg.reductionScale);
+      flipState.reductionPct = Math.min(cfg.reductionCap, flipState.reductionPct + reductionThisHit);
       flipState.zoneCenter = 20 + Math.random() * 60;
-      flipState.zoneWidth = Math.max(8, flipState.zoneWidth - 1.5);
-      flipState.speed = Math.min(0.080, flipState.speed + 0.005);
-      // Sprite spins FASTER each landed flip — 0.65s → minimum 0.12s by chain 10
+      flipState.zoneWidth = Math.max(cfg.widthMin, flipState.zoneWidth - cfg.widthStep);
+      flipState.speed = Math.min(cfg.speedCap, flipState.speed + cfg.speedStep);
       const dur = Math.max(0.12, 0.65 - flipState.chain * 0.055);
       const sprite = document.getElementById('player-sprite');
       if (sprite) sprite.style.setProperty('--flip-duration', dur.toFixed(2) + 's');
-      // Apply DEF reduction live
-      applyDefReduction();
+      applyStatReduction();
       $('#flip-chain').textContent = flipState.chain;
-      $('#flip-def').textContent = currentEnemyDefPctText();
+      $('#flip-def').textContent = currentEnemyStatPctText();
       $('#flip-overlay').classList.remove('success-flash'); void $('#flip-overlay').offsetWidth;
       $('#flip-overlay').classList.add('success-flash');
-      // Check for one-shot trigger
-      if (flipState.chain >= 10) {
+      if (cfg.oneShot && flipState.chain >= cfg.chainCap) {
         endFlip(true);
+      } else if (flipState.chain >= cfg.chainCap) {
+        // Hit the cap but no one-shot — auto cash out
+        endFlip(null);
       } else {
         updateFlipUI();
       }
     } else {
-      // MISS
       endFlip(false);
     }
   }
@@ -341,17 +393,25 @@ const Battle = (() => {
     endFlip(null); // null = cash out (no damage)
   }
 
-  function currentEnemyDefPctText() {
-    const reduction = (flipState && flipState.defReductionPct) || 0;
+  function currentEnemyStatPctText() {
+    const reduction = (flipState && flipState.reductionPct) || 0;
     return Math.round((1 - reduction) * 100) + '%';
   }
-  function applyDefReduction() {
+  function applyStatReduction() {
     if (!flipState || !state || !state.enemy) return;
-    if (state.enemy._baseDef === undefined) state.enemy._baseDef = state.enemy.def;
-    state.enemy.def = Math.max(1, Math.floor(state.enemy._baseDef * (1 - flipState.defReductionPct)));
+    const cfg = flipState.cfg;
+    if (cfg.stat === 'def') {
+      if (state.enemy._baseDef === undefined) state.enemy._baseDef = state.enemy.def;
+      state.enemy.def = Math.max(1, Math.floor(state.enemy._baseDef * (1 - flipState.reductionPct)));
+    } else if (cfg.stat === 'atk') {
+      if (state.enemy._baseAtk === undefined) state.enemy._baseAtk = state.enemy.atk;
+      state.enemy.atk = Math.max(1, Math.floor(state.enemy._baseAtk * (1 - flipState.reductionPct)));
+    }
   }
 
   function endFlip(oneShot) {
+    const cfg = flipState && flipState.cfg;
+    const statLabel = cfg && cfg.stat ? cfg.stat.toUpperCase() : 'DEF';
     cancelAnimationFrame(flipState.raf);
     const sprite = document.getElementById('player-sprite');
     sprite.classList.remove('flipping');
@@ -361,13 +421,12 @@ const Battle = (() => {
     const chain = flipState.chain;
     const oneShotKill = oneShot === true;
     const missed = oneShot === false;
-    const cashedOut = oneShot === null;
     flipState = null;
     dialogueQueue = [];
 
     if (oneShotKill) {
-      queueDialogue(`${a.char.name} pulled off ${chain} PERFECT FLIPS!`);
-      queueDialogue(`A one-shot landing strike obliterates ${state.enemy.char.name}!`);
+      queueDialogue(`${a.char.name} pulled off ${chain} ${cfg.perfectVerb}!`);
+      queueDialogue(`A one-shot finisher obliterates ${state.enemy.char.name}!`);
       playFX('blast', 'player'); flashHit('enemy');
       state.enemy.hp = 0;
       renderAll();
@@ -375,19 +434,20 @@ const Battle = (() => {
       return;
     }
     if (missed) {
-      const selfDmg = Math.floor((state.enemy.atk || 10) * (0.8 + chain * 0.15));
+      const enemyBaseAtk = state.enemy._baseAtk || state.enemy.atk || 10;
+      const selfDmg = Math.floor(enemyBaseAtk * (0.8 + chain * 0.15));
       a.hp = Math.max(0, a.hp - selfDmg);
       flashHit('player');
-      queueDialogue(`MISTIMED THE FLIP! ${a.char.name} took ${selfDmg} damage on landing.`);
-      if (chain > 0) queueDialogue(`Chain ended at ${chain} — enemy DEF locked at ${currentEnemyDefPctText().replace('%','')}%.`);
+      queueDialogue(`MISTIMED ${cfg.name}! ${a.char.name} took ${selfDmg} damage.`);
+      if (chain > 0) queueDialogue(`Chain ended at ${chain} — enemy ${statLabel} locked at ${currentEnemyStatPctText().replace('%','')}%.`);
       renderAll();
       if (a.hp <= 0) return playQueue(() => lose());
       playQueue(() => { afterPlayerTurn(); enemyTurn(); });
       return;
     }
-    // Cash out
-    queueDialogue(`${a.char.name} cashed out at ${chain} flips.`);
-    queueDialogue(`Enemy DEF stays reduced for the rest of the fight.`);
+    // Cash out (or hit chain cap on non-one-shot)
+    queueDialogue(`${a.char.name} landed ${chain} ${cfg.verb}.`);
+    queueDialogue(`Enemy ${statLabel} now at ${Math.round((state.enemy[cfg.stat] / (state.enemy[cfg.stat === 'def' ? '_baseDef' : '_baseAtk'] || 1)) * 100)}% — locked for the fight.`);
     renderAll();
     playQueue(() => { afterPlayerTurn(); enemyTurn(); });
   }
@@ -399,11 +459,15 @@ const Battle = (() => {
     if (which === 'main') {
       $('#cmd-main').classList.remove('hidden');
       setDialogue(`What will ${active().char.name} do?`);
-      // Disable swap if no bench or bench fainted
       const swapBtn = $('#cmd-main [data-cmd="swap"]');
       if (swapBtn) {
         const benchOK = state.party.length > 1 && bench().hp > 0;
         swapBtn.disabled = !benchOK;
+      }
+      // FLIP button shows the active char's minigame label
+      const flipBtn = document.getElementById('cmd-flip-btn');
+      if (flipBtn && MINIGAME_CFG[active().char.id]) {
+        flipBtn.textContent = MINIGAME_CFG[active().char.id].label;
       }
     } else {
       $('#cmd-' + which).classList.remove('hidden');
