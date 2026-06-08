@@ -150,7 +150,7 @@ const ENEMIES = {
   // ============ TUTORIAL ============
   toast: {
     name: 'BURNT TOAST',
-    sprite: 'assets/waffle.png', // placeholder reuse — user can swap later
+    sprite: 'assets/toast.png',
     tag: 'BURNT',
     hp: 60, ep: 20, atk: 12, def: 8, spd: 6,
     slowChance: 0.2,
@@ -163,7 +163,7 @@ const ENEMIES = {
   },
   milk: {
     name: 'SPOILED MILK',
-    sprite: 'assets/butta.png',
+    sprite: 'assets/milk.png',
     tag: 'DAIRY',
     hp: 90, ep: 30, atk: 14, def: 10, spd: 8,
     slowChance: 0.15,
@@ -191,7 +191,7 @@ const ENEMIES = {
   },
   microwave: {
     name: 'MICROWAVE',
-    sprite: 'assets/butta.png',
+    sprite: 'assets/microwave.png',
     tag: 'METAL',
     hp: 160, ep: 60, atk: 18, def: 14, spd: 8,
     slowChance: 0.2,
@@ -205,7 +205,7 @@ const ENEMIES = {
   },
   fridge: {
     name: 'THE FRIDGE',
-    sprite: 'assets/pancake.png',
+    sprite: 'assets/fridge.png',
     tag: 'METAL',
     hp: 240, ep: 70, atk: 20, def: 22, spd: 5,
     slowChance: 0.3,
@@ -222,7 +222,7 @@ const ENEMIES = {
   // ============ MINI BOSS ============
   cereal: {
     name: 'CEREAL KILLER',
-    sprite: 'assets/waffle.png',
+    sprite: 'assets/cereal.png',
     tag: 'SUGAR',
     hp: 320, ep: 90, atk: 24, def: 14, spd: 12,
     slowChance: 0.15,
@@ -237,7 +237,7 @@ const ENEMIES = {
   // ============ BOSS ============
   stove: {
     name: 'STOVE LORD',
-    sprite: 'assets/pancake.png',
+    sprite: 'assets/stove.png',
     tag: 'METAL',
     hp: 450, ep: 120, atk: 30, def: 22, spd: 9,
     slowChance: 0.2,
@@ -254,7 +254,7 @@ const ENEMIES = {
   // ============ FINAL BOSS ============
   mama: {
     name: 'MAMA BUNNY',
-    sprite: 'assets/butta.png',
+    sprite: 'assets/mama.png',
     tag: 'BREAKFAST',
     hp: 750, ep: 180, atk: 36, def: 26, spd: 10,
     slowChance: 0.18,
