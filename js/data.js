@@ -287,7 +287,7 @@ const ENEMIES = {
   // ============ BONUS ENEMIES (locked behind difficulty) ============
   coffee: {
     name: 'COFFEE POT',
-    sprite: 'assets/microwave.png',
+    sprite: 'assets/coffee.png',
     tag: 'METAL',
     hp: 360, ep: 100, atk: 26, def: 18, spd: 13,
     slowChance: 0.12,
@@ -300,7 +300,7 @@ const ENEMIES = {
   },
   dishwasher: {
     name: 'THE DISHWASHER',
-    sprite: 'assets/fridge.png',
+    sprite: 'assets/dishwasher.png',
     tag: 'METAL',
     hp: 720, ep: 160, atk: 38, def: 28, spd: 7,
     slowChance: 0.2,
@@ -316,7 +316,7 @@ const ENEMIES = {
   },
   blackfridge: {
     name: 'BLACK FRIDGE',
-    sprite: 'assets/fridge.png',
+    sprite: 'assets/blackfridge.png',
     tag: 'METAL',
     hp: 1050, ep: 200, atk: 48, def: 36, spd: 7,
     slowChance: 0.18,
@@ -332,7 +332,7 @@ const ENEMIES = {
   },
   papa: {
     name: 'PAPA BUNNY',
-    sprite: 'assets/mama.png',
+    sprite: 'assets/papa.png',
     tag: 'BREAKFAST',
     hp: 1500, ep: 280, atk: 56, def: 38, spd: 11,
     slowChance: 0.12,
