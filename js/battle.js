@@ -303,6 +303,11 @@ const Battle = (() => {
     ov.classList.remove('success-flash', 'fail-flash');
     ov.classList.toggle('mg-vertical', !!cfg.vertical);
     ov.style.setProperty('--mg-color', cfg.color);
+    // Reset any leftover inline styles from a previous session
+    const marker = $('#flip-marker');
+    if (marker) { marker.style.left = ''; marker.style.top = ''; }
+    const zone = $('#flip-zone');
+    if (zone) { zone.style.left = ''; zone.style.top = ''; zone.style.width = ''; zone.style.height = ''; zone.style.right = ''; }
     $('#flip-title-name').textContent = cfg.name + ' MINIGAME';
     $('#flip-stat-label').textContent = 'ENEMY ' + cfg.stat.toUpperCase();
     $('#flip-chain').textContent = '0';
@@ -799,13 +804,20 @@ const Battle = (() => {
       for (let i = e.char.phases.length - 1; i > state.phaseIdx; i--) {
         if (hpPct <= e.char.phases[i].threshold) { target = i; break; }
       }
-      // Apply every skipped phase's effects, but only ONE banner at the end
       const wasAt = state.phaseIdx;
       while (state.phaseIdx < target) {
         state.phaseIdx++;
         const ph = e.char.phases[state.phaseIdx];
         e.moves = ph.moves.slice();
-        if (ph.atkBuff) e.atk += ph.atkBuff;
+        if (ph.atkBuff) {
+          e.atk += ph.atkBuff;
+          // Keep stat-reduction baseline in sync so minigames don't wipe phase buffs
+          if (e._baseAtk !== undefined) e._baseAtk += ph.atkBuff;
+        }
+        if (ph.defBuff) {
+          e.def += ph.defBuff;
+          if (e._baseDef !== undefined) e._baseDef += ph.defBuff;
+        }
         if (ph.spdBuff) e.spd += ph.spdBuff;
         queueDialogue(ph.text);
       }

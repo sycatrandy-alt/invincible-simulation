@@ -1003,7 +1003,9 @@ button { font-family: inherit; }
   margin: 14px auto;
 }
 .flip-overlay.mg-vertical .flip-marker {
-  top: 0; left: -4px; right: -4px;
+  top: 0;
+  bottom: auto;
+  left: -4px; right: -4px;
   width: auto; height: 4px;
   background: #fff;
 }
