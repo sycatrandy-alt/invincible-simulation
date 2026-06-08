@@ -716,26 +716,26 @@ const Battle = (() => {
       // 4. Impact burst at target
       spawn('fx-impact fx-impact-' + typeKey + fromSuffix, 600);
 
-      // 5. Particle ring radiating from target
-      const partCount = (typeKey === 'physical') ? 12 : (typeKey === 'cosmic' ? 14 : (typeKey === 'energy' ? 10 : 8));
+      // 5. Particle ring (fewer, more distinct)
+      const partCount = (typeKey === 'physical') ? 8 : (typeKey === 'cosmic' ? 10 : 6);
       for (let i = 0; i < partCount; i++) {
         const p = document.createElement('div');
         p.className = 'fx fx-particle fx-particle-' + typeKey + fromSuffix;
-        const angle = (i / partCount) * 360 + Math.random() * 20;
-        const dist = 80 + Math.random() * 120;
+        const angle = (i / partCount) * 360 + (Math.random() * 30 - 15);
+        const dist = 100 + Math.random() * 80;
         p.style.setProperty('--angle', angle + 'deg');
         p.style.setProperty('--dist', dist + 'px');
-        p.style.animationDelay = (i * 0.015) + 's';
+        p.style.animationDelay = (i * 0.02) + 's';
         layer.appendChild(p);
         setTimeout(() => p.remove(), 900);
       }
 
-      // 6. Crack lines from impact (for high-impact types)
+      // 6. Crack lines from impact — only for PHYSICAL / BLAST high-impact moves
       if (['physical', 'cosmic'].includes(typeKey)) {
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 3; i++) {
           const c = document.createElement('div');
           c.className = 'fx fx-crack fx-crack-' + typeKey + fromSuffix;
-          c.style.setProperty('--rot', (i * 45 + Math.random() * 30 - 15) + 'deg');
+          c.style.setProperty('--rot', (i * 60 + Math.random() * 20 - 10) + 'deg');
           layer.appendChild(c);
           setTimeout(() => c.remove(), 700);
         }
