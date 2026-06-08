@@ -260,11 +260,12 @@ const Battle = (() => {
       raf: null,
       lastTapAt: 0
     };
-    // Drop focus off the FLIP menu button so SPACE doesn't re-click it
     if (document.activeElement && document.activeElement.blur) {
       document.activeElement.blur();
     }
-    document.getElementById('player-sprite').classList.add('flipping');
+    const sprite = document.getElementById('player-sprite');
+    sprite.style.setProperty('--flip-duration', '0.65s');
+    sprite.classList.add('flipping');
     $('#flip-overlay').classList.remove('hidden');
     $('#flip-overlay').classList.remove('success-flash', 'fail-flash');
     $('#flip-chain').textContent = '0';
@@ -313,6 +314,10 @@ const Battle = (() => {
       flipState.zoneCenter = 20 + Math.random() * 60;
       flipState.zoneWidth = Math.max(8, flipState.zoneWidth - 1.5);
       flipState.speed = Math.min(0.080, flipState.speed + 0.005);
+      // Sprite spins FASTER each landed flip — 0.65s → minimum 0.12s by chain 10
+      const dur = Math.max(0.12, 0.65 - flipState.chain * 0.055);
+      const sprite = document.getElementById('player-sprite');
+      if (sprite) sprite.style.setProperty('--flip-duration', dur.toFixed(2) + 's');
       // Apply DEF reduction live
       applyDefReduction();
       $('#flip-chain').textContent = flipState.chain;
@@ -348,7 +353,9 @@ const Battle = (() => {
 
   function endFlip(oneShot) {
     cancelAnimationFrame(flipState.raf);
-    document.getElementById('player-sprite').classList.remove('flipping');
+    const sprite = document.getElementById('player-sprite');
+    sprite.classList.remove('flipping');
+    sprite.style.removeProperty('--flip-duration');
     $('#flip-overlay').classList.add('hidden');
     const a = active();
     const chain = flipState.chain;

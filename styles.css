@@ -996,10 +996,13 @@ button { font-family: inherit; }
 @keyframes flipSuccess { 0%,100% { border-color: var(--magenta); } 50% { border-color: var(--green); box-shadow: 0 0 64px var(--green); } }
 @keyframes flipFail { 0%,100% { border-color: var(--magenta); } 50% { border-color: var(--red); box-shadow: 0 0 64px var(--red); } }
 
-/* Spin animation for the active sprite while flipping */
-.sprite.flipping { animation: spriteFlip 0.6s linear infinite; }
+/* Spin animation for the active sprite while flipping — duration is driven by JS */
+.sprite.flipping {
+  animation: spriteFlip var(--flip-duration, 0.65s) linear infinite;
+  filter: drop-shadow(0 0 12px var(--magenta)) drop-shadow(0 0 24px rgba(255,43,214,0.6));
+}
 @keyframes spriteFlip {
-  0% { transform: rotate(0deg); }
+  0%   { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 .cmd-grid.hidden { display: none; }
