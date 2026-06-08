@@ -178,7 +178,7 @@ const ENEMIES = {
   },
   whisk: {
     name: 'THE WHISK',
-    sprite: 'assets/waffle.png',
+    sprite: 'assets/whisk.png',
     tag: 'METAL',
     hp: 140, ep: 30, atk: 21, def: 11, spd: 16,
     slowChance: 0.05,
