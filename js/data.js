@@ -152,7 +152,7 @@ const ENEMIES = {
     name: 'BURNT TOAST',
     sprite: 'assets/toast.png',
     tag: 'BURNT',
-    hp: 60, ep: 20, atk: 12, def: 8, spd: 6,
+    hp: 75, ep: 25, atk: 14, def: 9, spd: 6,
     slowChance: 0.2,
     moves: ['crumble', 'scorch'],
     intro: 'A piece of BURNT TOAST stands up. It smells terrible.',
@@ -165,9 +165,9 @@ const ENEMIES = {
     name: 'SPOILED MILK',
     sprite: 'assets/milk.png',
     tag: 'DAIRY',
-    hp: 90, ep: 30, atk: 14, def: 10, spd: 8,
+    hp: 115, ep: 35, atk: 16, def: 11, spd: 8,
     slowChance: 0.15,
-    canHeal: true, healAmount: 20, healThreshold: 0.5, healChance: 0.2,
+    canHeal: true, healAmount: 24, healThreshold: 0.5, healChance: 0.25,
     healDialogue: 'MILK: "I curdle. I reform. The cycle continues."',
     moves: ['curdle', 'rancid'],
     intro: 'SPOILED MILK sloshes forward. The fumes already hurt.',
@@ -180,7 +180,7 @@ const ENEMIES = {
     name: 'THE WHISK',
     sprite: 'assets/waffle.png',
     tag: 'METAL',
-    hp: 110, ep: 25, atk: 18, def: 9, spd: 16,
+    hp: 140, ep: 30, atk: 21, def: 11, spd: 16,
     slowChance: 0.05,
     moves: ['whiskCut', 'crumble'],
     intro: 'THE WHISK spins itself awake. Wire spokes flare out.',
@@ -193,7 +193,7 @@ const ENEMIES = {
     name: 'MICROWAVE',
     sprite: 'assets/microwave.png',
     tag: 'METAL',
-    hp: 160, ep: 60, atk: 18, def: 14, spd: 8,
+    hp: 200, ep: 75, atk: 22, def: 16, spd: 8,
     slowChance: 0.2,
     moves: ['microwaveRay', 'whiskCut', 'flameBurst'],
     intro: 'MICROWAVE: "*30 SECONDS REMAINING.*"',
@@ -207,9 +207,9 @@ const ENEMIES = {
     name: 'THE FRIDGE',
     sprite: 'assets/fridge.png',
     tag: 'METAL',
-    hp: 240, ep: 70, atk: 20, def: 22, spd: 5,
+    hp: 300, ep: 90, atk: 24, def: 25, spd: 5,
     slowChance: 0.3,
-    canHeal: true, healAmount: 35, healThreshold: 0.4, healChance: 0.25,
+    canHeal: true, healAmount: 42, healThreshold: 0.4, healChance: 0.3,
     healDialogue: 'FRIDGE: "Self-defrost cycle complete." (Damage seals over.)',
     moves: ['fridgeSlam', 'freezerBurn', 'crumble'],
     intro: 'THE FRIDGE looms. The motor hum is hostile.',
@@ -224,7 +224,7 @@ const ENEMIES = {
     name: 'CEREAL KILLER',
     sprite: 'assets/cereal.png',
     tag: 'SUGAR',
-    hp: 320, ep: 90, atk: 24, def: 14, spd: 12,
+    hp: 400, ep: 110, atk: 29, def: 16, spd: 12,
     slowChance: 0.15,
     moves: ['cerealStorm', 'crumble', 'rancid', 'curdle'],
     intro: 'CEREAL KILLER tips a hundred boxes over the floor. "BREAKFAST IS SERVED."',
@@ -239,9 +239,9 @@ const ENEMIES = {
     name: 'STOVE LORD',
     sprite: 'assets/stove.png',
     tag: 'METAL',
-    hp: 450, ep: 120, atk: 30, def: 22, spd: 9,
+    hp: 570, ep: 145, atk: 36, def: 25, spd: 9,
     slowChance: 0.2,
-    canHeal: true, healAmount: 60, healThreshold: 0.35, healChance: 0.3,
+    canHeal: true, healAmount: 75, healThreshold: 0.35, healChance: 0.32,
     healDialogue: 'STOVE LORD: "The pilot light NEVER dies." (Burners reignite, wounds close.)',
     moves: ['pyrolysis', 'flameBurst', 'microwaveRay'],
     intro: 'STOVE LORD: "I have COOKED for generations of this house. Who are YOU to interrupt breakfast?"',
@@ -256,9 +256,9 @@ const ENEMIES = {
     name: 'MAMA BUNNY',
     sprite: 'assets/mama.png',
     tag: 'BREAKFAST',
-    hp: 750, ep: 180, atk: 36, def: 26, spd: 10,
+    hp: 950, ep: 220, atk: 44, def: 30, spd: 10,
     slowChance: 0.18,
-    canHeal: true, healAmount: 85, healThreshold: 0.3, healChance: 0.3,
+    canHeal: true, healAmount: 105, healThreshold: 0.3, healChance: 0.32,
     healDialogue: 'MAMA BUNNY: "I raised you. Did you think you could END me?" (She heals.)',
     moves: ['motherKnows', 'putItDown', 'cerealStorm'],
     intro: 'MAMA BUNNY: "Sweetie. It\'s time to PUT THE GAME DOWN."',
@@ -282,6 +282,84 @@ const ENEMIES = {
       }
     ],
     xp: 900, butter: 800
+  },
+
+  // ============ BONUS ENEMIES (locked behind difficulty) ============
+  coffee: {
+    name: 'COFFEE POT',
+    sprite: 'assets/microwave.png',
+    tag: 'METAL',
+    hp: 360, ep: 100, atk: 26, def: 18, spd: 13,
+    slowChance: 0.12,
+    moves: ['scorch', 'microwaveRay', 'flameBurst'],
+    intro: 'COFFEE POT: "I have been BREWING since 4 AM. Test me."',
+    midHpDialogue: [
+      { at: 0.4, text: 'COFFEE POT: "I haven\'t even been refilled today."' }
+    ],
+    xp: 380, butter: 320
+  },
+  dishwasher: {
+    name: 'THE DISHWASHER',
+    sprite: 'assets/fridge.png',
+    tag: 'METAL',
+    hp: 720, ep: 160, atk: 38, def: 28, spd: 7,
+    slowChance: 0.2,
+    canHeal: true, healAmount: 60, healThreshold: 0.4, healChance: 0.28,
+    healDialogue: 'DISHWASHER: "RINSE CYCLE." (Steam vents seal the damage.)',
+    moves: ['fridgeSlam', 'freezerBurn', 'whiskCut', 'flameBurst'],
+    intro: 'THE DISHWASHER opens its door. Steam. "PRE-WASH COMPLETE."',
+    midHpDialogue: [
+      { at: 0.5, text: 'DISHWASHER: "MAIN CYCLE. HEATED DRY."' },
+      { at: 0.2, text: 'DISHWASHER: "SANITIZE BOOST."' }
+    ],
+    xp: 620, butter: 540
+  },
+  blackfridge: {
+    name: 'BLACK FRIDGE',
+    sprite: 'assets/fridge.png',
+    tag: 'METAL',
+    hp: 1050, ep: 200, atk: 48, def: 36, spd: 7,
+    slowChance: 0.18,
+    canHeal: true, healAmount: 100, healThreshold: 0.4, healChance: 0.3,
+    healDialogue: 'BLACK FRIDGE: "I updated my firmware overnight." (Cold mist re-seals.)',
+    moves: ['fridgeSlam', 'freezerBurn', 'microwaveRay', 'flameBurst'],
+    intro: 'BLACK FRIDGE: "I learned from my predecessor\'s defeat."',
+    midHpDialogue: [
+      { at: 0.55, text: 'BLACK FRIDGE: "Compressor: WAR MODE."' },
+      { at: 0.25, text: 'BLACK FRIDGE: "Smart-home network engaged. The toaster is sending help."' }
+    ],
+    xp: 850, butter: 750
+  },
+  papa: {
+    name: 'PAPA BUNNY',
+    sprite: 'assets/mama.png',
+    tag: 'BREAKFAST',
+    hp: 1500, ep: 280, atk: 56, def: 38, spd: 11,
+    slowChance: 0.12,
+    canHeal: true, healAmount: 150, healThreshold: 0.3, healChance: 0.3,
+    healDialogue: 'PAPA BUNNY: "I came down here once. I can do it again." (He shakes it off.)',
+    moves: ['putItDown', 'motherKnows', 'bedtimeNow', 'pyrolysis'],
+    phases: [
+      {
+        threshold: 1.0,
+        text: 'PAPA BUNNY: "Did your mother send you to bed already?"',
+        moves: ['putItDown', 'motherKnows', 'pyrolysis']
+      },
+      {
+        threshold: 0.55,
+        text: 'PAPA BUNNY: "Don\'t make me get up from this chair, son."',
+        moves: ['putItDown', 'motherKnows', 'bedtimeNow', 'pyrolysis'],
+        atkBuff: 8
+      },
+      {
+        threshold: 0.22,
+        text: 'PAPA BUNNY stands up. The house feels smaller. "Now you\'ve done it."',
+        moves: ['bedtimeNow', 'putItDown', 'motherKnows', 'pyrolysis'],
+        atkBuff: 14, spdBuff: 4
+      }
+    ],
+    intro: 'PAPA BUNNY clears his throat from upstairs. The floor creaks.',
+    xp: 1400, butter: 1300
   }
 };
 
@@ -293,7 +371,13 @@ const SCENES = [
   { region: 'kitchen', id: 'k4', num: '04', title: 'THE FRIDGE',     desc: 'It hums hostility.',                                  enemy: 'fridge',    recLvl: 9 },
   { region: 'kitchen', id: 'k5', num: '05', title: 'CEREAL KILLER',  desc: 'A mascot-fueled stand-off.',                          enemy: 'cereal',    recLvl: 11, boss: true },
   { region: 'kitchen', id: 'k6', num: '06', title: 'STOVE LORD',     desc: 'Four burners. One judgment.',                         enemy: 'stove',     recLvl: 14, boss: true },
-  { region: 'kitchen', id: 'k7', num: '07', title: 'MAMA BUNNY',     desc: 'She just wants you to come to the table.',            enemy: 'mama',      recLvl: 17, boss: true }
+  { region: 'kitchen', id: 'k7', num: '07', title: 'MAMA BUNNY',     desc: 'She just wants you to come to the table.',            enemy: 'mama',      recLvl: 17, boss: true },
+
+  // ============ BONUS SCENES (1 per difficulty unlocked) ============
+  { region: 'kitchen', id: 'b1', num: 'B1', title: 'COFFEE POT (NORMAL+)',    desc: 'Hot. Sentient. Will only fight on NORMAL or higher.',            enemy: 'coffee',    recLvl: 12, minDifficulty: 'normal' },
+  { region: 'kitchen', id: 'b2', num: 'B2', title: 'THE DISHWASHER (HARD+)', desc: 'Spinning death cycle. HARD and above only.',                     enemy: 'dishwasher',recLvl: 18, minDifficulty: 'hard',   boss: true },
+  { region: 'kitchen', id: 'b3', num: 'B3', title: 'BLACK FRIDGE (MASTER+)', desc: 'A fridge that learned. MASTER difficulty only.',                 enemy: 'blackfridge',recLvl: 22, minDifficulty: 'master', boss: true },
+  { region: 'kitchen', id: 'b4', num: 'B4', title: 'PAPA BUNNY (IMPOSSIBLE)', desc: 'You weren\'t supposed to make him come downstairs.',            enemy: 'papa',      recLvl: 26, minDifficulty: 'impossible', boss: true }
 ];
 
 const SHOP_DATA = {

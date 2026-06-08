@@ -1,7 +1,7 @@
 // INVINCIBLE: SIMULATION — main shell, menus, save state
 
 const Game = (() => {
-  const SAVE_KEY = 'pancake_bunny_rpg_save_v1';
+  const SAVE_KEY = 'pancake_bunny_rpg_save_v2';
 
   const defaultState = () => ({
     butter: 100,
@@ -9,7 +9,7 @@ const Game = (() => {
     bag: { crumb: 2 },
     boughtUpgrades: {},
     boughtBlueprints: {},
-    perks: {},                    // { starter_crumb: true, three_fighter: true, ... }
+    perks: {},
     chars: {
       pancake: { id: 'pancake', level: 1, xp: 0, moves: ['zap', 'shock'] },
       waffle:  { id: 'waffle',  level: 1, xp: 0, moves: ['toss', 'fuse'] },
@@ -22,11 +22,35 @@ const Game = (() => {
       butta:   { hp: 0, ep: 0, atk: 0, def: 0 },
       global:  { critRate: 0, xpMult: 1, butterMult: 1, critDmg: 0, benchRegen: 0 }
     },
-    scenesDone: {},
+    scenesDone: {},                                       // keyed as `${difficulty}:${sceneId}`
     currentScene: null,
     currentRegion: 'kitchen',
+    difficulty: 'easy',
+    unlockedDifficulties: ['easy'],                       // 'easy','normal','hard','master','impossible'
     settings: { speed: 2, text: 30, blood: 'comic', shake: true, vol: 70 }
   });
+
+  // Difficulty multipliers — enemy stat boost + reward boost
+  const DIFFICULTY = {
+    easy:       { name: 'EASY',       enemy: 0.80, atk: 0.85, reward: 0.75, color: '#34ff9a' },
+    normal:     { name: 'NORMAL',     enemy: 1.00, atk: 1.00, reward: 1.00, color: '#00e5ff' },
+    hard:       { name: 'HARD',       enemy: 1.35, atk: 1.20, reward: 1.50, color: '#ffd400' },
+    master:     { name: 'MASTER',     enemy: 1.75, atk: 1.45, reward: 2.25, color: '#ff8a3a' },
+    impossible: { name: 'IMPOSSIBLE', enemy: 2.40, atk: 1.80, reward: 3.50, color: '#ff2f4f' }
+  };
+  const DIFF_ORDER = ['easy','normal','hard','master','impossible'];
+
+  function getDifficulty() { return DIFFICULTY[state.difficulty] || DIFFICULTY.easy; }
+  function difficultyKey(sceneId) { return state.difficulty + ':' + sceneId; }
+  function unlockNextDifficulty() {
+    const i = DIFF_ORDER.indexOf(state.difficulty);
+    const next = DIFF_ORDER[i + 1];
+    if (next && !state.unlockedDifficulties.includes(next)) {
+      state.unlockedDifficulties.push(next);
+      return next;
+    }
+    return null;
+  }
 
   function deepMerge(target, source) {
     if (!source || typeof source !== 'object') return target;
@@ -63,7 +87,7 @@ const Game = (() => {
     if (sc) sc.textContent = `BUTTER: ${state.butter} · SYRUP: ${state.syrup}`;
   }
 
-  function xpForNext(lvl) { return 60 + lvl * 55; }
+  function xpForNext(lvl) { return 80 + lvl * 70; }
 
   function gainXP(charId, amount) {
     const c = state.chars[charId];
@@ -92,14 +116,25 @@ const Game = (() => {
   function hasPendingLearn() { return pendingLearns.length > 0; }
   function consumeLearn() { return pendingLearns.shift() || null; }
 
-  function markSceneWon(sceneId) { if (sceneId) state.scenesDone[sceneId] = true; }
+  function markSceneWon(sceneId) {
+    if (!sceneId) return null;
+    state.scenesDone[difficultyKey(sceneId)] = true;
+    // Final scene on current difficulty → unlock next
+    if (sceneId === 'k7') return unlockNextDifficulty();
+    return null;
+  }
+  function isSceneDone(sceneId) {
+    return !!state.scenesDone[difficultyKey(sceneId)];
+  }
 
   return {
     get state() { return state; },
     save, gainXP, xpForNext,
-    markSceneWon,
+    markSceneWon, isSceneDone,
     hasPendingLearn, consumeLearn, queueLearn,
-    updateHud
+    updateHud,
+    getDifficulty, difficultyKey, unlockNextDifficulty,
+    DIFFICULTY, DIFF_ORDER
   };
 })();
 
@@ -130,25 +165,59 @@ function renderScenes() {
   const list = document.getElementById('scene-list');
   list.innerHTML = '';
 
+  // Difficulty selector
+  const diffBar = document.createElement('div');
+  diffBar.className = 'diff-bar';
+  diffBar.innerHTML = Game.DIFF_ORDER.map(d => {
+    const def = Game.DIFFICULTY[d];
+    const unlocked = Game.state.unlockedDifficulties.includes(d);
+    const active = Game.state.difficulty === d;
+    return `<button class="diff-btn ${active ? 'active' : ''} ${unlocked ? '' : 'locked'}"
+              data-diff="${d}" style="--diff-color:${def.color}">
+              ${unlocked ? '' : '🔒 '}${def.name}
+            </button>`;
+  }).join('');
+  diffBar.querySelectorAll('.diff-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      if (b.classList.contains('locked')) {
+        flashDialogue('Beat MAMA BUNNY on a lower difficulty first.');
+        return;
+      }
+      Game.state.difficulty = b.dataset.diff;
+      Game.save();
+      renderScenes();
+    });
+  });
+  list.appendChild(diffBar);
+
   // Region tab bar — single region for now
   const tabs = document.createElement('div');
   tabs.className = 'region-tabs';
-  tabs.innerHTML = `
-    <button class="region-tab active" data-region="kitchen">🍳 KITCHEN</button>
-  `;
+  tabs.innerHTML = `<button class="region-tab active" data-region="kitchen">🍳 KITCHEN</button>`;
   list.appendChild(tabs);
   if (Game.state.currentRegion !== 'kitchen') {
     Game.state.currentRegion = 'kitchen';
     Game.save();
   }
 
-  // Scene grid for current region
+  // Scene grid for current region (difficulty-aware)
   const grid = document.createElement('div');
   grid.className = 'scene-grid';
-  const regionScenes = SCENES.filter(s => s.region === Game.state.currentRegion);
+  const currentDiffIdx = Game.DIFF_ORDER.indexOf(Game.state.difficulty);
+  const regionScenes = SCENES.filter(s => {
+    if (s.region !== Game.state.currentRegion) return false;
+    if (s.minDifficulty) {
+      const reqIdx = Game.DIFF_ORDER.indexOf(s.minDifficulty);
+      if (currentDiffIdx < reqIdx) return false;
+    }
+    return true;
+  });
   regionScenes.forEach((sc, i) => {
-    const done = Game.state.scenesDone[sc.id];
-    const isUnlocked = i === 0 || Game.state.scenesDone[regionScenes[i-1].id];
+    const done = Game.isSceneDone(sc.id);
+    // Bonus scenes (b1..b4) don't gate on previous bonus — they unlock once you've cleared k7 on a lower difficulty
+    let isUnlocked;
+    if (sc.id.startsWith('b')) isUnlocked = Game.isSceneDone('k7') || sc.minDifficulty === Game.state.difficulty;
+    else isUnlocked = i === 0 || Game.isSceneDone(regionScenes[i-1].id);
     const card = document.createElement('div');
     card.className = 'scene-card' + (isUnlocked ? '' : ' locked');
     let badge = '';
@@ -290,10 +359,13 @@ function showVictory(result, sc) {
   const title = document.getElementById('victory-title');
   const text = document.getElementById('victory-text');
   const gainLine = result.butter > 0 ? `<br><span style="color:var(--yellow)">+${result.butter} BUTTER</span>` : '';
+  const unlockLine = result.unlockedDifficulty
+    ? `<br><span style="color:var(--green)">✦ ${Game.DIFFICULTY[result.unlockedDifficulty].name} DIFFICULTY UNLOCKED ✦</span>`
+    : '';
   const levels = Game.state.roster.map(id => `${CHARACTERS[id].name} Lv ${Game.state.chars[id].level}`).join(' · ');
   if (result.win) {
     title.textContent = 'VICTORY';
-    text.innerHTML = `${sc.title} cleared.<br>${levels}${gainLine}<br>TOTAL BUTTER: ${Game.state.butter}`;
+    text.innerHTML = `${sc.title} cleared.${unlockLine}<br>${levels}${gainLine}<br>TOTAL BUTTER: ${Game.state.butter}`;
   } else if (result.scripted) {
     title.textContent = 'STORY END';
     text.innerHTML = `${sc.title} survived.${gainLine}<br>TOTAL BUTTER: ${Game.state.butter}`;

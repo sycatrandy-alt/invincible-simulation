@@ -10,13 +10,26 @@ const Battle = (() => {
   // No scripted-difficulty-multiplier enemies in this build (kept hook for future)
   const isScriptedHardCap = () => false;
 
-  function start(party, enemyDef, onEnd) {
-    // party is an array of char save objects: [active, bench]
+  function start(party, enemyDef, onEnd, opts = {}) {
+    const isBossOrMini = !!enemyDef.phases || enemyDef.scripted || opts.isBoss;
+    // 25% chance of multi-spawn on non-boss/non-scripted fights
+    const multiSpawn = !isBossOrMini && Math.random() < 0.25;
+    let finalEnemyDef = enemyDef;
+    if (multiSpawn) {
+      finalEnemyDef = Object.assign({}, enemyDef, {
+        hp: Math.floor(enemyDef.hp * 1.55),
+        atk: Math.floor(enemyDef.atk * 1.20),
+        butter: Math.floor(enemyDef.butter * 1.50),
+        xp: Math.floor(enemyDef.xp * 1.45),
+        name: enemyDef.name + ' (×2)'
+      });
+    }
     state = {
       party: party.map(p => buildCombatant(p, p.level || 1, true)),
       activeIdx: 0,
-      enemy: buildEnemyCombatant(enemyDef),
+      enemy: buildEnemyCombatant(finalEnemyDef),
       turnCount: 1,
+      multiSpawn,
       onEnd,
       buffs: { atk: 0, def: 0, revive: false, phoenix: false, damageCharge: false, dodge: false },
       debuffs: { enemyAtk: 0 },
@@ -24,20 +37,32 @@ const Battle = (() => {
       firedDialogue: new Set(),
       scripted: !!enemyDef.scripted
     };
-    playBGM(enemyDef);
-    // Clear any stale phase banner from a previous fight
+    // Defer audio start so the battle UI paints first — feels instant
+    requestAnimationFrame(() => playBGM(enemyDef));
     const pb = document.getElementById('phase-banner');
     if (pb) { pb.classList.remove('show'); pb.textContent = ''; }
-    // Apply STARTER KIT perk — one free CRUMB into the bag each battle
     if (Game.state.perks && Game.state.perks.starter_crumb) {
       Game.state.bag.crumb = (Game.state.bag.crumb || 0) + 1;
+    }
+    // Show / hide the second-enemy sprite
+    const e2 = document.getElementById('enemy-sprite-2');
+    if (e2) {
+      if (multiSpawn) {
+        e2.src = enemyDef.sprite;
+        e2.classList.remove('hidden');
+      } else {
+        e2.classList.add('hidden');
+      }
     }
     renderAll();
     dialogueQueue = [];
     inputLocked = false;
     queueDialogue(enemyDef.intro);
-    queueDialogue(`A wild ${enemyDef.name} blocks your path!`);
-    queueDialogue(`What will ${active().char.name} do?`);
+    if (multiSpawn) queueDialogue(`Two ${enemyDef.name}s stepped up at once!`);
+    else queueDialogue(`A wild ${enemyDef.name} blocks your path!`);
+    if (multiSpawn && state.party.length > 1) {
+      queueDialogue(`${active().char.name} and ${bench().char.name} BOTH stay out for the brawl!`);
+    }
     playQueue(() => showCmd('main'));
   }
 
@@ -99,12 +124,17 @@ const Battle = (() => {
   }
 
   function buildEnemyCombatant(def) {
+    const diff = Game.getDifficulty();
+    const hpMult  = diff.enemy;
+    const atkMult = diff.atk;
     return {
       char: def,
       lvl: '?',
-      maxHP: def.hp, hp: def.hp,
-      maxEP: def.ep, ep: def.ep,
-      atk: def.atk, def: def.def, spd: def.spd,
+      maxHP: Math.floor(def.hp * hpMult), hp: Math.floor(def.hp * hpMult),
+      maxEP: Math.floor(def.ep * hpMult), ep: Math.floor(def.ep * hpMult),
+      atk: Math.floor(def.atk * atkMult),
+      def: Math.floor(def.def * hpMult),
+      spd: def.spd,
       moves: def.moves.slice(),
       isPlayer: false
     };
@@ -179,7 +209,7 @@ const Battle = (() => {
         return;
       }
       setDialogue(dialogueQueue.shift());
-      setTimeout(step, 1700);
+      setTimeout(step, 1300);
     };
     step();
   }
@@ -367,6 +397,7 @@ const Battle = (() => {
     if (hitCount > 1) queueDialogue(`Two hits landed!`);
     if (m.power > 0) queueDialogue(`Dealt ${totalDmg} damage.`);
 
+    benchPassiveAttack();
     renderAll();
     checkPhaseShift();
     playQueue(() => {
@@ -558,11 +589,11 @@ const Battle = (() => {
     if (state.buffs.atk > 0) state.buffs.atk--;
     if (state.buffs.def > 0) state.buffs.def--;
     if (state.debuffs.enemyAtk > 0) state.debuffs.enemyAtk--;
-    // Bench regen
+    // Bench regen (slower if also active-attacking in multi-spawn)
     if (state.party.length > 1) {
       const b = bench();
       if (b.hp > 0) {
-        const baseRegen = 0.03;
+        const baseRegen = state.multiSpawn ? 0.015 : 0.03;
         const bonus = Game.state.permaBuffs?.global?.benchRegen || 0;
         b.hp = Math.min(b.maxHP, b.hp + Math.floor(b.maxHP * (baseRegen + bonus)));
         b.ep = Math.min(b.maxEP, b.ep + 1);
@@ -570,6 +601,28 @@ const Battle = (() => {
     }
     state.turnCount++;
     renderAll();
+  }
+
+  // Passive bench attack — fires once per turn in multi-spawn battles
+  function benchPassiveAttack() {
+    if (!state.multiSpawn || state.party.length < 2) return null;
+    const b = bench();
+    if (!b || b.hp <= 0) return null;
+    // Use the bench's cheapest move (power > 0)
+    const usable = b.moves
+      .map(mid => MOVES[mid])
+      .filter(m => m && m.power > 0 && b.ep >= m.ep)
+      .sort((a, c) => a.ep - c.ep);
+    const m = usable[0];
+    if (!m) return null;
+    b.ep = Math.max(0, b.ep - m.ep);
+    const calc = calcDamage(Math.floor(b.atk * 0.7), state.enemy.def, state.enemy.char.tag, m, true);
+    const dmg = calc.dmg;
+    state.enemy.hp = Math.max(0, state.enemy.hp - dmg);
+    playFX(m.type, 'player');
+    flashHit('enemy');
+    queueDialogue(`${b.char.name} (bench) also lands ${m.name} → ${dmg} dmg.`);
+    return dmg;
   }
 
   function enemyTurn() {
@@ -744,9 +797,11 @@ const Battle = (() => {
   }
 
   function win() {
-    const xp = state.enemy.char.xp;
+    const diff = Game.getDifficulty();
+    const xpBase = state.enemy.char.xp;
+    const xp = Math.floor(xpBase * diff.reward);
     const butterMult = Game.state.permaBuffs?.global?.butterMult || 1;
-    const butter = Math.floor((state.enemy.char.butter || 0) * butterMult);
+    const butter = Math.floor((state.enemy.char.butter || 0) * butterMult * diff.reward);
     Game.state.butter += butter;
     // XP to all party members who participated (active + bench)
     let anyLv = false;
@@ -763,9 +818,9 @@ const Battle = (() => {
     if (anyLv) dialogueQueue.push('Level up!');
     renderAll();
     playQueue(() => {
-      Game.markSceneWon(Game.state.currentScene);
+      const unlocked = Game.markSceneWon(Game.state.currentScene);
       Game.save();
-      state.onEnd({ win: true, lvUp: anyLv, xp, butter });
+      state.onEnd({ win: true, lvUp: anyLv, xp, butter, unlockedDifficulty: unlocked });
     });
   }
 
