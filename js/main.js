@@ -539,9 +539,27 @@ window.addEventListener('DOMContentLoaded', () => {
       if (cmd === 'fight') Battle.showCmd('moves');
       else if (cmd === 'utility') Battle.showCmd('utility');
       else if (cmd === 'item') Battle.showCmd('items');
+      else if (cmd === 'flip')  Battle.startFlip();
       else if (cmd === 'swap') Battle.showCmd('swap');
       else if (cmd === 'flee') Battle.flee();
     });
+  });
+
+  // Flip minigame buttons
+  const flipTap = document.getElementById('flip-tap');
+  const flipCash = document.getElementById('flip-cash');
+  if (flipTap)  flipTap.addEventListener('click',  () => Battle.tapFlip());
+  if (flipCash) flipCash.addEventListener('click', () => Battle.cashOutFlip());
+  // SPACE = tap flip when overlay visible
+  document.addEventListener('keydown', (e) => {
+    const overlay = document.getElementById('flip-overlay');
+    if (!overlay || overlay.classList.contains('hidden')) return;
+    if (e.code === 'Space' || e.key === ' ') {
+      e.preventDefault();
+      Battle.tapFlip();
+    } else if (e.key === 'Escape') {
+      Battle.cashOutFlip();
+    }
   });
   document.getElementById('cmd-back').addEventListener('click', () => Battle.showCmd('main'));
 

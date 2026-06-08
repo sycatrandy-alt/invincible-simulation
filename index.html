@@ -41,7 +41,7 @@
         <button class="cyber-btn" data-go="credits">CREDITS</button>
       </div>
       <div class="hud-corner tl">KITCHEN OS://MAIN</div>
-      <div class="hud-corner tr">v3.0.2 · DIALOGUE WATCHDOG</div>
+      <div class="hud-corner tr">v3.1 · FLIP MINIGAME</div>
       <div class="hud-corner bl">USER: PANCAKE_BUNNY</div>
       <div class="hud-corner br" id="credits-display">BUTTER: 0  |  SYRUP: 0</div>
     </section>
@@ -160,6 +160,22 @@
         <div class="stage-frame bl">VILTRUM-LINK ONLINE</div>
         <div class="stage-frame br" id="bgm-indicator">♪ —</div>
         <div id="phase-banner" class="phase-banner">PHASE 2</div>
+
+        <div id="flip-overlay" class="flip-overlay hidden">
+          <div class="flip-title">FLIP MINIGAME</div>
+          <div class="flip-sub">SPACE / TAP to land</div>
+          <div class="flip-stats">
+            <span>CHAIN <b id="flip-chain">0</b></span>
+            <span>ENEMY DEF <b id="flip-def">100%</b></span>
+          </div>
+          <div class="flip-track">
+            <div id="flip-zone" class="flip-zone"></div>
+            <div id="flip-marker" class="flip-marker"></div>
+          </div>
+          <button id="flip-tap" class="cyber-btn small">↻ LAND FLIP</button>
+          <button id="flip-cash" class="cyber-btn small">CASH OUT</button>
+          <div class="flip-help">Land in the GREEN zone to keep flipping. Miss = take damage. Cash out before failing.</div>
+        </div>
         <div id="fx-layer" class="fx-layer"></div>
         <div id="bench-panel" class="bench-panel hidden">
           <div class="bench-label">BENCH</div>
@@ -211,10 +227,11 @@
 
       <div class="battle-ui">
         <div id="dialogue" class="dialogue">A wild battle begins.</div>
-        <div id="cmd-main" class="cmd-grid cmd-grid-5">
+        <div id="cmd-main" class="cmd-grid cmd-grid-6">
           <button class="cmd-btn fight" data-cmd="fight">⚔ FIGHT</button>
           <button class="cmd-btn utility" data-cmd="utility">⚙ UTILITY</button>
           <button class="cmd-btn item" data-cmd="item">🜨 ITEM</button>
+          <button class="cmd-btn flip" data-cmd="flip">↻ FLIP</button>
           <button class="cmd-btn swap" data-cmd="swap">⇄ SWAP</button>
           <button class="cmd-btn flee" data-cmd="flee">⏏ FLEE</button>
         </div>
